@@ -1,5 +1,5 @@
 import gluestackPlugin from '@gluestack-ui/nativewind-utils/tailwind-plugin';
-
+import { Platform } from 'react-native';
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: process.env.DARK_MODE ? process.env.DARK_MODE : 'media',
@@ -174,10 +174,31 @@ module.exports = {
           error: 'rgb(var(--color-indicator-error)/<alpha-value>)',
         },
       },
+
       fontFamily: {
-        web: ['Inter', 'sans-serif'],
-        mobile: ['Montserrat', 'sans-serif'],
+        'inter': ['Inter', 'system-ui', 'sans-serif'],
+        'inter-light': ['Inter-Light', 'Inter', 'system-ui', 'sans-serif'],
+        'inter-regular': ['Inter-Regular', 'Inter', 'system-ui', 'sans-serif'],
+        'inter-medium': ['Inter-Medium', 'Inter', 'system-ui', 'sans-serif'],
+        'inter-semibold': ['Inter-SemiBold', 'Inter', 'system-ui', 'sans-serif'],
+        'inter-bold': ['Inter-Bold', 'Inter', 'system-ui', 'sans-serif'],
+        'inter-extrabold': ['Inter-ExtraBold', 'Inter', 'system-ui', 'sans-serif'],
+        'inter-black': ['Inter-Black', 'Inter', 'system-ui', 'sans-serif'],
+
+        'montserrat': ['Montserrat', 'Inter', 'system-ui', 'sans-serif'],
+        'montserrat-thin': ['Montserrat-Thin', 'Inter-Light', 'system-ui', 'sans-serif'],
+        'montserrat-extralight': ['Montserrat-ExtraLight', 'Inter-Light', 'system-ui', 'sans-serif'],
+        'montserrat-light': ['Montserrat-Light', 'Inter-Light', 'system-ui', 'sans-serif'],
+        'montserrat-regular': ['Montserrat-Regular', 'Inter-Regular', 'system-ui', 'sans-serif'],
+        'montserrat-medium': ['Montserrat-Medium', 'Inter-Medium', 'system-ui', 'sans-serif'],
+        'montserrat-semibold': ['Montserrat-SemiBold', 'Inter-SemiBold', 'system-ui', 'sans-serif'],
+        'montserrat-bold': ['Montserrat-Bold', 'Inter-Bold', 'system-ui', 'sans-serif'],
+        'montserrat-extrabold': ['Montserrat-ExtraBold', 'Inter-ExtraBold', 'system-ui', 'sans-serif'],
+        'montserrat-black': ['Montserrat-Black', 'Inter-Black', 'system-ui', 'sans-serif'],
+
+        'sans': ['Inter', 'system-ui', 'sans-serif'],
       },
+
       fontWeight: {
         extrablack: '950',
       },

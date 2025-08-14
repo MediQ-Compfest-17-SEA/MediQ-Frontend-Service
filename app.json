@@ -4,7 +4,7 @@
     "slug": "MediQ-Frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "../styles/assets/images/icon.png",
+    "icon": "/home/jordan-atom/MediQ-Frontend/styles/assets/images/icon.png",
     "scheme": "mediqfrontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

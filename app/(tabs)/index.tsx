@@ -4,7 +4,7 @@ import {View, Text} from "react-native"
 export default function HomeScreen() {
   return (
     <View style={styles.stepContainer}>
-      <Text>Hello</Text>
+      <Text className='text-2xl'>Hello</Text>
     </View>
   );
 }

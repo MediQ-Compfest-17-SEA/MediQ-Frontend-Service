@@ -3,13 +3,13 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-
+import "../styles/global.css"
 
 
 export default function RootLayout() {
 
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require('../styles/assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   if (!loaded) {

@@ -3,7 +3,7 @@ import { Platform, StyleSheet } from 'react-native';
 import {View, Text} from "react-native"
 export default function HomeScreen() {
   return (
-    <View style={styles.stepContainer}>
+    <View  style={styles.stepContainer}>
       <Text className='text-2xl'>Hello</Text>
     </View>
   );

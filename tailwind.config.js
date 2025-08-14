@@ -175,10 +175,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        heading: undefined,
-        body: undefined,
-        mono: undefined,
-        roboto: ['Roboto', 'sans-serif'],
+        web: ['Inter', 'sans-serif'],
+        mobile: ['Montserrat', 'sans-serif'],
       },
       fontWeight: {
         extrablack: '950',

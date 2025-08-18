@@ -8,27 +8,25 @@ import {
   Animated,
   Alert
 } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import { 
   X, 
   Camera, 
   Flashlight, 
   FlashlightOff, 
   RotateCcw,
-  Check,
   AlertCircle
 } from 'lucide-react-native';
-import { router, useRouter } from 'expo-router';
+import {  useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
-
+const cameraRef = useRef<CameraView | null>(null)
 export default function ScanScreen() {
-  const [facing, setFacing] = useState('back');
+  const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [flash, setFlash] = useState('off');
+  const [flash, setFlash] = useState<FlashMode>('off');
   const [isScanning, setIsScanning] = useState(false);
-  const [scannedData, setScannedData] = useState(null);
-  const cameraRef = useRef(null);
+  const [scannedData, setScannedData] = useState<string | null>(null);
   const router = useRouter();
   // Animasi untuk scanner overlay
   const scanAnimation = useRef(new Animated.Value(0)).current;
@@ -93,9 +91,30 @@ export default function ScanScreen() {
   const takePicture = async () => {
     if (isScanning || !cameraRef.current) return;
     setIsScanning(true);
-    
+  
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: true, // kalau mau langsung OCR
+      });
+  
+      console.log("Captured photo:", photo.uri);
+  
+      // Simpan ke state untuk preview / OCR
+      setScannedData(photo.uri);
+  
+      // 👉 nanti kamu bisa kirim ke API OCR di sini
+      // const result = await sendToOCR(photo.base64);
+      // setScannedData(result);
+  
+    } catch (error) {
+      console.error("Error taking picture:", error);
+      Alert.alert("Gagal", "Tidak bisa mengambil foto, coba lagi.");
+    } finally {
+      setIsScanning(false);
+    }
   };
-
+  
 
 
   // Ukuran area scan KTP (rasio 85.6 x 53.98 mm)
@@ -105,11 +124,12 @@ export default function ScanScreen() {
   return (
     <View className="flex-1  bg-black">
       <StatusBar barStyle="light-content" backgroundColor="black" />
-      
       <CameraView 
         ref={cameraRef}
+        facing={facing}
+        flash={flash}      
         style={{ flex: 1 }}
-        flash="auto"
+
         className="flex-1"
         onCameraReady={() => console.log('Camera is ready')}
         onMountError={(error) => {
@@ -197,8 +217,6 @@ export default function ScanScreen() {
                   }],
                 }}
               />
-
-              {/* Dotted border */}
               <View className="absolute inset-0 border-2 border-dashed border-white/50" />
             </View>
           </View>
@@ -214,7 +232,6 @@ export default function ScanScreen() {
           </Text>
         </View>
 
-        {/* Bottom controls */}
         <View className="absolute bottom-0 left-0 right-0 pb-10">
           <View className="flex-row items-center justify-center px-6">
             {/* Rotate camera button */}

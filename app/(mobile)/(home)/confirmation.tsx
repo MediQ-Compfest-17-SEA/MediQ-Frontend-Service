@@ -6,7 +6,8 @@ import {
   ScrollView,
   StatusBar,
   Animated,
-  Alert
+  Alert,
+  TextInput
 } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,8 +24,7 @@ import {
 import { Form } from '@/components/form/Form';
 import { FormField } from '@/components/form/FormField';
 import { FormLabel } from '@/components/form/FormLabel';
-import { VStack } from '@/components/ui/vstack/index.web';
-import { TextInput } from 'react-native';
+import { VStack } from '@/components/ui/vstack';
 import { FormMessage } from '@/components/form/FormMessage';
 import { useRouter } from 'expo-router';
 
@@ -142,10 +142,11 @@ export default function ConfirmationScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   const onSubmit = async (data: OcrData) => {
     setIsSubmitting(true);
+    
     try {
       // Restructure data untuk API
       const payload = {
@@ -173,10 +174,12 @@ export default function ConfirmationScreen() {
 
       // Hit API untuk submit form
       console.log('Submitting payload:', payload);
+      router.push('/(mobile)/(home)/waiting-list')
 
     } catch (error) {
       setIsSubmitting(false);
       Alert.alert('Error', 'Gagal menyimpan data. Silakan coba lagi.');
+      console.error('Submission error:', error);
     }
   };
   const router = useRouter();
@@ -257,7 +260,8 @@ export default function ConfirmationScreen() {
 
               <VStack space="md">
                 <View>
-                  <FormLabel>NIK</FormLabel>
+                  <FormLabel>
+                    NIK</FormLabel>
                   <FormField
                     name="nik"
                     render={({ value, onChange, onBlur }) => (

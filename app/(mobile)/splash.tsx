@@ -4,7 +4,7 @@ import {
   Text,
   StatusBar,
   Animated,
-  Dimensions
+  // Dimensions
 } from 'react-native';
 import {
   Heart,
@@ -21,7 +21,7 @@ export default function SplashScreen() {
   const [textSlide] = useState(new Animated.Value(30));
   const [pulseAnim] = useState(new Animated.Value(1));
   const [floatAnim] = useState(new Animated.Value(0));
-  const [loadingDots] = useState(new Animated.Value(0));
+
 
   useEffect(() => {
     Animated.sequence([
@@ -70,15 +70,8 @@ export default function SplashScreen() {
       ])
     ).start();
 
-    // Loading dots loop
-    Animated.loop(
-      Animated.timing(loadingDots, {
-        toValue: 1,
-        duration: 1500,
-        useNativeDriver: true,
-      })
-    ).start();
-  }, []);
+   
+  }, [floatAnim, logoScale, logoOpacity, pulseAnim, textOpacity, textSlide, floatAnim]);
 
 
   return (
@@ -92,7 +85,7 @@ export default function SplashScreen() {
           style={{
             opacity: logoOpacity,
             transform: [{
-              translateY: loadingDots.interpolate({
+              translateY: floatAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, -10],
               }),
@@ -109,7 +102,7 @@ export default function SplashScreen() {
           style={{
             opacity: textOpacity,
             transform: [{
-              translateY: loadingDots.interpolate({
+              translateY: floatAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, 8],
               }),
@@ -127,7 +120,7 @@ export default function SplashScreen() {
           style={{
             opacity: textOpacity,
             transform: [{
-              translateX: loadingDots.interpolate({
+              translateX: floatAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, 15],
               }),
@@ -144,7 +137,7 @@ export default function SplashScreen() {
           style={{
             opacity: logoOpacity,
             transform: [{
-              translateX: loadingDots.interpolate({
+              translateX: floatAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, -12],
               }),
@@ -181,7 +174,7 @@ export default function SplashScreen() {
               style={{
                 opacity: logoOpacity,
                 transform: [{
-                  scale: loadingDots.interpolate({
+                  scale: floatAnim.interpolate({
                     inputRange: [0, 0.2, 0.4, 1],
                     outputRange: [0.3, 1, 0.3, 0.3],
                   }),
@@ -233,7 +226,7 @@ export default function SplashScreen() {
           <View className="flex-row items-center space-x-2">
             <Animated.View
               style={{
-                opacity: loadingDots.interpolate({
+                opacity: floatAnim.interpolate({
                   inputRange: [0, 0.2, 0.4, 1],
                   outputRange: [0.3, 1, 0.3, 0.3],
                 }),
@@ -242,7 +235,7 @@ export default function SplashScreen() {
             />
             <Animated.View
               style={{
-                opacity: loadingDots.interpolate({
+                opacity: floatAnim.interpolate({
                   inputRange: [0, 0.2, 0.4, 0.6, 1],
                   outputRange: [0.3, 0.3, 1, 0.3, 0.3],
                 }),
@@ -251,7 +244,7 @@ export default function SplashScreen() {
             />
             <Animated.View
               style={{
-                opacity: loadingDots.interpolate({
+                opacity: floatAnim.interpolate({
                   inputRange: [0, 0.4, 0.6, 0.8, 1],
                   outputRange: [0.3, 0.3, 0.3, 1, 0.3],
                 }),

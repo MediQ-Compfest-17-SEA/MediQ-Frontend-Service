@@ -1,5 +1,4 @@
 import gluestackPlugin from '@gluestack-ui/nativewind-utils/tailwind-plugin';
-import { Platform } from 'react-native';
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: process.env.DARK_MODE ? process.env.DARK_MODE : 'media',

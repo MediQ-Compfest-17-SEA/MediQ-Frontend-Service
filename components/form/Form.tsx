@@ -1,7 +1,5 @@
 import React from "react";
-import {UseFormReturn, FormProvider} from "react-hook-form"
-
-import { FieldValues } from "react-hook-form";
+import {UseFormReturn, FormProvider, FieldValues} from "react-hook-form"
 
 interface FormProps<T extends FieldValues> {
     children : React.ReactNode

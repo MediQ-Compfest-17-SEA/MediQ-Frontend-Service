@@ -35,7 +35,7 @@ export default function LandingScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
 
   return (

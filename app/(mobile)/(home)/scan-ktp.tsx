@@ -20,7 +20,6 @@ import {
 import {  useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
-const cameraRef = useRef<CameraView | null>(null)
 export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
@@ -28,6 +27,7 @@ export default function ScanScreen() {
   const [isScanning, setIsScanning] = useState(false);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const router = useRouter();
+  const cameraRef = useRef<CameraView | null>(null)
   // Animasi untuk scanner overlay
   const scanAnimation = useRef(new Animated.Value(0)).current;
 
@@ -50,7 +50,7 @@ export default function ScanScreen() {
     };
 
     startScanAnimation();
-  }, []);
+  }, [scanAnimation]);
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;

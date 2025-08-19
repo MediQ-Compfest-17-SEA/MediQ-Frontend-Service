@@ -23,7 +23,7 @@ export default function AdminLayout() {
     { name: "Users", icon: Users, href: "/(web)/(admin)/(dashboard)/users" },
     { name: "Queue", icon: Clock, href: "/(web)/(admin)/(dashboard)/queue" },
     { name: "Settings", icon: Settings, href: "/(web)/(admin)/(dashboard)/settings" },
-    { name: "Leaderboard", icon: Heart, href: "/(web)/(leaderboard)/" },
+    { name: "Leaderboard", icon: Heart, href: "/(web)/(leaderboard)/leaderboard" },
   ];
 
   useEffect(() => {

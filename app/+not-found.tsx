@@ -5,6 +5,7 @@ import {
   StatusBar,
   Animated,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import {
   Heart,
@@ -17,7 +18,7 @@ import { useRouter } from "expo-router";
 
 export default function NotFoundScreen() {
   const router = useRouter();
-  
+
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   const [floatAnim] = useState(new Animated.Value(0));
@@ -39,10 +40,10 @@ export default function NotFoundScreen() {
     ]).start();
 
     // Floating animation for decorative elements
-    Animated.timing(floatAnim, { 
-      toValue: 1, 
-      duration: 1500, 
-      useNativeDriver: true 
+    Animated.timing(floatAnim, {
+      toValue: 1,
+      duration: 1500,
+      useNativeDriver: true
     }).start();
   }, [fadeAnim, slideAnim, floatAnim]);
 
@@ -51,7 +52,15 @@ export default function NotFoundScreen() {
       Animated.timing(buttonScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
       Animated.timing(buttonScale, { toValue: 1, duration: 100, useNativeDriver: true }),
     ]).start(() => {
-      router.back();
+      if(router.canGoBack()){
+        router.back();
+      } else {
+        if (Platform.OS === 'web') {
+          router.push('/(web)/(admin)/(dashboard)');
+        } else {
+          router.push('/(mobile)/(home)/landing');
+        }
+      }
     });
   };
 
@@ -60,84 +69,25 @@ export default function NotFoundScreen() {
       Animated.timing(buttonScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
       Animated.timing(buttonScale, { toValue: 1, duration: 100, useNativeDriver: true }),
     ]).start(() => {
-      router.push("/(mobile)/(home)/landing");
+      switch (Platform.OS) {
+        case 'web':
+          router.push('/(web)/(admin)/(dashboard)');
+          break;
+
+        case 'android':
+        case 'ios':
+          router.push('/(mobile)/(home)/landing');
+          break;
+
+        default:
+          router.push('/');
+          break;
+      }
     });
   };
-
   return (
     <View className="flex-1 bg-blue-500">
       <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
-
-      {/* Floating Decorative Elements */}
-      <View className="absolute inset-0">
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{
-              translateY: floatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -8],
-              }),
-            }],
-          }}
-          className="absolute top-20 left-6"
-        >
-          <View className="w-12 h-12 bg-white bg-opacity-20 rounded-xl items-center justify-center">
-            <Search size={20} color="white" />
-          </View>
-        </Animated.View>
-
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{
-              translateY: floatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 6],
-              }),
-            }],
-          }}
-          className="absolute top-32 right-8"
-        >
-          <View className="w-10 h-10 bg-white bg-opacity-20 rounded-full items-center justify-center">
-            <Heart size={16} color="white" />
-          </View>
-        </Animated.View>
-
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{
-              translateX: floatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 10],
-              }),
-            }],
-          }}
-          className="absolute bottom-32 left-4"
-        >
-          <View className="w-14 h-14 bg-white bg-opacity-20 rounded-2xl items-center justify-center">
-            <Home size={20} color="white" />
-          </View>
-        </Animated.View>
-
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{
-              translateX: floatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -8],
-              }),
-            }],
-          }}
-          className="absolute bottom-40 right-6"
-        >
-          <View className="w-11 h-11 bg-white bg-opacity-20 rounded-xl items-center justify-center">
-            <AlertTriangle size={18} color="white" />
-          </View>
-        </Animated.View>
-      </View>
 
       {/* Main Content */}
       <View className="flex-1 justify-center items-center px-6">
@@ -145,14 +95,16 @@ export default function NotFoundScreen() {
         <Animated.View
           style={{
             opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
+            transform: [{ translateY: slideAnim }],
+            flexDirection: 'column',
+            alignItems: 'center',
+            marginBottom: 8,
           }}
-          className="items-center mb-8"
         >
           <View className="w-24 h-24 bg-white bg-opacity-20 rounded-full items-center justify-center mb-4">
             <AlertTriangle size={48} color="white" />
           </View>
-          
+
           <Text className="text-white text-6xl font-bold mb-2">404</Text>
           <View className="w-16 h-1 bg-white bg-opacity-50 rounded-full"></View>
         </Animated.View>
@@ -161,9 +113,12 @@ export default function NotFoundScreen() {
         <Animated.View
           style={{
             opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
+            transform: [{ translateY: slideAnim }],
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 10
           }}
-          className="items-center mb-10"
         >
           <Text className="text-white text-2xl font-bold mb-4 text-center leading-8">
             Halaman Tidak Ditemukan
@@ -177,14 +132,17 @@ export default function NotFoundScreen() {
         <Animated.View
           style={{
             opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
+            transform: [{ translateY: slideAnim }],
+            width: '100%',
+            paddingHorizontal: 20,
+            marginHorizontal: 'auto',
           }}
-          className="w-full px-4 space-y-4"
+          pointerEvents="box-none" 
         >
           {/* Home Button */}
           <TouchableOpacity
             onPress={handleHomePress}
-            className="bg-white rounded-2xl py-4 px-6 shadow-lg flex-row items-center justify-center mb-4"
+            className="bg-white rounded-2xl py-4 px-6 shadow-lg flex-row items-center justify-center mb-4 z-10"
             activeOpacity={0.8}
           >
             <Home size={24} color="#3B82F6" />
@@ -196,7 +154,7 @@ export default function NotFoundScreen() {
           {/* Back Button */}
           <Animated.View
             style={{
-              transform: [{ scale: buttonScale }]
+              transform: [{ scale: buttonScale }],
             }}
           >
             <TouchableOpacity
@@ -214,8 +172,10 @@ export default function NotFoundScreen() {
 
         {/* Helper Text */}
         <Animated.View
-          style={{ opacity: fadeAnim }}
-          className="mt-8 items-center"
+          style={{
+            opacity: fadeAnim,
+            marginTop: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center'
+          }}
         >
           <Text className="text-white text-opacity-60 text-sm text-center px-8">
             Jika masalah berlanjut, silakan hubungi tim support
@@ -225,10 +185,15 @@ export default function NotFoundScreen() {
 
       {/* Bottom Branding */}
       <Animated.View
-        style={{ opacity: fadeAnim }}
-        className="absolute bottom-8 left-0 right-0 items-center"
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }],
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
       >
-        <View className="flex-row items-center mb-2">
+        <View className="flex flex-row items-center mb-2">
           <View className="w-6 h-6 bg-white bg-opacity-20 rounded-lg items-center justify-center mr-2">
             <Heart size={12} color="white" />
           </View>

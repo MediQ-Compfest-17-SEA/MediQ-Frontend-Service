@@ -1,5 +1,3 @@
-//SOON
-
 import { CheckCircle, Activity, AlertCircle, Clock } from "lucide-react-native";
 
 export const STATUS_ICON = {

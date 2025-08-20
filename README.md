@@ -7,6 +7,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
+- [Environtment Setup](#environtment-setup)
 - [Getting Started](#getting-started)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -72,8 +73,8 @@ You can start developing by editing the files inside the **app** directory. This
 
 Create a .env file in the root project:
 
-API_URL=https://api.mediq.com
-SOCKET_URL=wss://api.mediq.com
+- API_URL=https://api.mediq.com
+- SOCKET_URL=wss://api.mediq.com
 
 ## Get a fresh project
 

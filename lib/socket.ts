@@ -21,7 +21,7 @@ class WebSocketService {
   connect() {
     if (this.socketRef) return;
 
-    this.socketRef = io("http://localhost:8080");
+    this.socketRef = io(process.env.SOCKET_API_URL || "http://localhost:3000");
 
     this.socketRef.on("connect", () => {
       console.log("WebSocket connected");

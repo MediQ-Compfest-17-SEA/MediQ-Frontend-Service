@@ -1,7 +1,7 @@
 import { Form } from "@/components/form/Form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { View, Text, TextInput, TouchableOpacity, StatusBar } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StatusBar, Alert } from "react-native";
 import { VStack } from "@/components/ui/vstack";
 import { Heart, Lock, Mail } from "lucide-react-native";
 import z from "zod";
@@ -9,6 +9,7 @@ import { FormField } from "@/components/form/FormField";
 import { FormLabel } from "@/components/form/FormLabel";
 import { FormMessage } from "@/components/form/FormMessage";
 import { useRouter } from "expo-router";
+import axiosClient from "@/lib/axios";
 
 const validationSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -28,18 +29,25 @@ export default function LoginPage() {
       email: "",
       password: "",
     },
-    mode: "onBlur",
+    mode: "onTouched",
+    reValidateMode: "onChange"
   });
 
-  const onSubmit = (data: LoginProps) => {
-    console.log(data);
-    router.push('/(web)/(admin)/(dashboard)');
+  const onSubmit = async (data: LoginProps) => {
+    try {
+      const response = await axiosClient.post("/auth/login", data);
+      console.log(response.data);
+      router.push('/(web)/(admin)/(dashboard)');
+    } catch (error) {
+      Alert.alert("Login failed", "Please check your credentials and try again." + error);
+      console.log(error);
+    }
   };
 
   return (
     <View className="flex-1 min-h-screen bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      
+
       <View className="flex-1 items-center justify-center px-6 py-8">
         {/* Logo & Header */}
         <View className="items-center mb-8">
@@ -108,7 +116,7 @@ export default function LoginPage() {
             </VStack>
 
             {/* Login Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={methods.handleSubmit(onSubmit)}
               className="mt-6 bg-blue-500 rounded-lg py-3 shadow-sm"
             >

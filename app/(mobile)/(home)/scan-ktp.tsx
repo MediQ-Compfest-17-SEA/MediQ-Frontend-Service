@@ -1,24 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Dimensions, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Dimensions,
   StatusBar,
   Animated,
   Alert
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
-import { 
-  X, 
-  Camera, 
-  Flashlight, 
-  FlashlightOff, 
+import {
+  X,
+  Camera,
+  Flashlight,
+  FlashlightOff,
   RotateCcw,
   AlertCircle
 } from 'lucide-react-native';
-import {  useRouter } from 'expo-router';
-
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker'
 const { width, height } = Dimensions.get('window');
 export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -88,25 +88,46 @@ export default function ScanScreen() {
     setFlash(current => (current === 'off' ? 'on' : 'off'));
   };
 
+  const pickImageGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert("Izin Ditolak", "Aplikasi membutuhkan akses ke galeri untuk memilih gambar KTP.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    })
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      console.log("Picked image:", asset.uri);
+      setScannedData(asset.uri);
+      //called api
+    }
+
+  }
   const takePicture = async () => {
     if (isScanning || !cameraRef.current) return;
     setIsScanning(true);
-  
+
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
-        base64: true, // kalau mau langsung OCR
+        base64: true, 
       });
-  
+
       console.log("Captured photo:", photo.uri);
-  
+
       // Simpan ke state untuk preview / OCR
       setScannedData(photo.uri);
-  
-      // 👉 nanti kamu bisa kirim ke API OCR di sini
+
       // const result = await sendToOCR(photo.base64);
       // setScannedData(result);
-  
+
     } catch (error) {
       console.error("Error taking picture:", error);
       Alert.alert("Gagal", "Tidak bisa mengambil foto, coba lagi.");
@@ -114,20 +135,20 @@ export default function ScanScreen() {
       setIsScanning(false);
     }
   };
-  
+
 
 
   // Ukuran area scan KTP (rasio 85.6 x 53.98 mm)
   const scanAreaWidth = width * 0.85;
-  const scanAreaHeight = scanAreaWidth * 0.63; 
+  const scanAreaHeight = scanAreaWidth * 0.63;
 
   return (
     <View className="flex-1  bg-black">
       <StatusBar barStyle="light-content" backgroundColor="black" />
-      <CameraView 
+      <CameraView
         ref={cameraRef}
         facing={facing}
-        flash={flash}      
+        flash={flash}
         style={{ flex: 1 }}
 
         className="flex-1"
@@ -136,7 +157,7 @@ export default function ScanScreen() {
           console.error('Camera mount error:', error);
           Alert.alert('Error', 'Gagal mengakses kamera');
         }
-      }
+        }
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-6 pt-12 pb-4">
@@ -146,11 +167,11 @@ export default function ScanScreen() {
           >
             <X size={24} color="white" />
           </TouchableOpacity>
-          
+
           <Text className="text-white font-bold text-lg">
             Scan KTP
           </Text>
-          
+
           <TouchableOpacity
             onPress={toggleFlash}
             className="w-12 h-12 bg-black/50 rounded-full items-center justify-center"
@@ -163,12 +184,12 @@ export default function ScanScreen() {
           </TouchableOpacity>
         </View>
         <View className="flex-1 items-center justify-center">
-          <View className="flex-row">            
+          <View className="flex-row">
             {/* Scan area */}
-            <View 
-              style={{ 
+            <View
+              style={{
                 width: scanAreaWidth,
-                height: scanAreaHeight 
+                height: scanAreaHeight
               }}
               className="relative"
             >
@@ -178,19 +199,19 @@ export default function ScanScreen() {
                 <View className="absolute top-0 left-0 w-8 h-1 bg-white" />
                 <View className="absolute top-0 left-0 w-1 h-8 bg-white" />
               </View>
-              
+
               {/* Top Right */}
               <View className="absolute top-0 right-0 w-8 h-8">
                 <View className="absolute top-0 right-0 w-8 h-1 bg-white" />
                 <View className="absolute top-0 right-0 w-1 h-8 bg-white" />
               </View>
-              
+
               {/* Bottom Left */}
               <View className="absolute bottom-0 left-0 w-8 h-8">
                 <View className="absolute bottom-0 left-0 w-8 h-1 bg-white" />
                 <View className="absolute bottom-0 left-0 w-1 h-8 bg-white" />
               </View>
-              
+
               {/* Bottom Right */}
               <View className="absolute bottom-0 right-0 w-8 h-8">
                 <View className="absolute bottom-0 right-0 w-8 h-1 bg-white" />
@@ -247,9 +268,8 @@ export default function ScanScreen() {
               <TouchableOpacity
                 onPress={takePicture}
                 disabled={isScanning}
-                className={`w-20 h-20 rounded-full border-4 border-white items-center justify-center ${
-                  isScanning ? 'bg-blue-500' : 'bg-white/20'
-                }`}
+                className={`w-20 h-20 rounded-full border-4 border-white items-center justify-center ${isScanning ? 'bg-blue-500' : 'bg-white/20'
+                  }`}
               >
                 {isScanning ? (
                   <View className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -257,7 +277,7 @@ export default function ScanScreen() {
                   <Camera size={32} color="white" />
                 )}
               </TouchableOpacity>
-              
+
               {isScanning && (
                 <Text className="text-white text-sm mt-2">
                   Memproses...
@@ -267,7 +287,7 @@ export default function ScanScreen() {
 
             {/* Gallery/Manual input button */}
             <TouchableOpacity
-              onPress={() => console.log('Open gallery or manual input')}
+              onPress={pickImageGallery}
               className="w-14 h-14 bg-white/20 rounded-full items-center justify-center"
             >
               <Text className="text-white text-xs font-bold">

@@ -258,6 +258,9 @@ export default function WaitingListScreen() {
           </Text>
         </View>
       </Animated.View>
+      {/* <View className='absolute bottom-7 right-4 p-8 bg-blue-500 rounded-full p-4'>
+        <Text className='text-white'>Chatbot</Text>
+      </View> */}
     </View>
   );
 }

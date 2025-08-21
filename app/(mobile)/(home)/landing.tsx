@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
   StatusBar,
   Animated,
   ScrollView
 } from 'react-native';
-import { 
-  Camera, 
-  Scan, 
-  Clock, 
-  Shield, 
+import {
+  Camera,
+  Scan,
+  Clock,
+  Shield,
   ChevronRight,
   Heart,
-  Smartphone
+  Smartphone,
+  Hospital
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -22,6 +23,21 @@ export default function LandingScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   const router = useRouter();
+
+  const [isOCRRegister, setIsOCRRegister] = useState<boolean>(false);
+
+  const isRegistered = () => {
+    //api call userID
+    try {
+      setIsOCRRegister(false);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  useEffect(() => {
+    isRegistered();
+  }, [])
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -41,7 +57,7 @@ export default function LandingScreen() {
   return (
     <View className="flex-1  bg-gradient-to-br from-blue-50 to-white">
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <ScrollView 
+      <ScrollView
         className="flex-1 px-4 "
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 30 }}
@@ -66,36 +82,56 @@ export default function LandingScreen() {
         </Animated.View>
 
         {/* Main Feature Card */}
-        <Animated.View
-          style={{ opacity: fadeAnim }}
-          className="px-6 mb-8"
-        >
-          <View className="bg-white rounded-3xl p-8 shadow-xl">
-            <View className="items-center">
-              <View className="w-20 h-20 bg-blue-500 items-center rounded-full justify-center mb-6 ">
-                <Scan size={40} color="white" />
-              </View>
-              <Text className="text-black text-2xl font-bold text-center mb-3">
-                Scan KTP Otomatis
-              </Text>
-              <Text className="text-black text-center text-base leading-6 mb-8">
-                Daftar antrean dengan mudah dan cepat. Cukup scan KTP Anda, data akan terisi otomatis menggunakan teknologi OCR
-              </Text>
-              
+        {isOCRRegister ? (
+          <Animated.View
+            style={{ opacity: fadeAnim }}
+            className="mb-4 px-6"
+          >
+            <View className='flex flex-col items-center justify-center gap-3'>
               <TouchableOpacity
-                onPress={() => router.push('/(mobile)/(home)/scan-ktp')}
+                onPress={() => router.push('/(mobile)/(home)/waiting-list')}
                 className="bg-white rounded-full px-10 py-5 shadow-lg active:scale-95 w-full"
               >
                 <View className="flex-row items-center justify-center">
-                  <Camera size={24} color="#3B82F6" />
+                  <Hospital size={24} color="#3B82F6" />
                   <Text className="text-blue-500 font-bold text-lg ml-3">
-                    Mulai Scan KTP
+                    Ke Halaman Antrian
                   </Text>
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        ) : (
+          <Animated.View
+            style={{ opacity: fadeAnim }}
+            className="px-6 mb-8"
+          >
+            <View className="bg-white rounded-3xl p-8 shadow-xl">
+              <View className="items-center">
+                <View className="w-20 h-20 bg-blue-500 items-center rounded-full justify-center mb-6 ">
+                  <Scan size={40} color="white" />
+                </View>
+                <Text className="text-black text-2xl font-bold text-center mb-3">
+                  Scan KTP Otomatis
+                </Text>
+                <Text className="text-black text-center text-base leading-6 mb-8">
+                  Daftar antrean dengan mudah dan cepat. Cukup scan KTP Anda, data akan terisi otomatis menggunakan teknologi OCR
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/(mobile)/(home)/scan-ktp')}
+                  className="bg-white rounded-full px-10 py-5 shadow-lg active:scale-95 w-full"
+                >
+                  <View className="flex-row items-center justify-center">
+                    <Camera size={24} color="#3B82F6" />
+                    <Text className="text-blue-500 font-bold text-lg ml-3">
+                      Mulai Scan KTP
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Features Grid */}
         <Animated.View
@@ -105,7 +141,6 @@ export default function LandingScreen() {
           <Text className="text-gray-800 font-bold text-xl mb-6">
             Fitur Unggulan
           </Text>
-          
           <View className="space-y-4">
             <View className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
               <View className="flex-row items-center">
@@ -181,7 +216,7 @@ export default function LandingScreen() {
           <Text className="text-gray-800 font-bold text-xl mb-6">
             Cara Penggunaan
           </Text>
-          
+
           <View className="bg-gray-50 rounded-2xl p-6">
             <View className="space-y-6">
               <View className="flex-row items-start">
@@ -197,7 +232,7 @@ export default function LandingScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-start">
                 <View className="w-10 h-10 bg-green-500 rounded-full items-center justify-center mr-4 mt-1">
                   <Text className="text-white font-bold">2</Text>
@@ -211,7 +246,7 @@ export default function LandingScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-start">
                 <View className="w-10 h-10 bg-purple-500 rounded-full items-center justify-center mr-4 mt-1">
                   <Text className="text-white font-bold">3</Text>
@@ -225,7 +260,7 @@ export default function LandingScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-start">
                 <View className="w-10 h-10 bg-orange-500 rounded-full items-center justify-center mr-4 mt-1">
                   <Text className="text-white font-bold">4</Text>
@@ -248,24 +283,39 @@ export default function LandingScreen() {
           style={{ opacity: fadeAnim }}
           className="px-6"
         >
-          <View className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <Text className="text-center text-gray-600 text-base mb-4">
-              Siap memulai pendaftaran digital?
-            </Text>
-            
+          {isOCRRegister ? (
             <TouchableOpacity
-              onPress={() => router.push('/(mobile)/(home)/scan-ktp')}
+              onPress={() => router.push('/(mobile)/(home)/waiting-list')}
               className="bg-blue-500 rounded-full py-4 px-6 active:scale-95"
             >
               <View className="flex-row items-center justify-center">
-                <Camera size={20} color="white" />
+                <Hospital size={20} color="white" />
                 <Text className="text-white font-bold text-base ml-2">
-                  Scan KTP Sekarang
+                  Ke Halaman Antrian
                 </Text>
                 <ChevronRight size={20} color="white" />
               </View>
             </TouchableOpacity>
-          </View>
+          ) : (
+            <View className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+              <Text className="text-center text-gray-600 text-base mb-4">
+                Siap memulai pendaftaran digital?
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(mobile)/(home)/scan-ktp')}
+                className="bg-blue-500 rounded-full py-4 px-6 active:scale-95"
+              >
+                <View className="flex-row items-center justify-center">
+                  <Camera size={20} color="white" />
+                  <Text className="text-white font-bold text-base ml-2">
+                    Scan KTP Sekarang
+                  </Text>
+                  <ChevronRight size={20} color="white" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
         </Animated.View>
       </ScrollView>
     </View>

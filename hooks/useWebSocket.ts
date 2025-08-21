@@ -1,24 +1,83 @@
-import { useEffect, useState } from "react";
-import WebSocketService from "../lib/socket";
+import { io, Socket } from "socket.io-client";
 
-export function useWebSocket(event: string) {
-  const [data, setData] = useState<any>(null);
+class WebSocketService {
+  private static instance: WebSocketService | null = null;
+  private socketRef: Socket | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private callbacks: Record<string, Function[]> = {};
 
-  useEffect(() => {
-    const ws = WebSocketService;
+  public isConnected = false;
 
-    ws.connect();
+  private constructor() {}
 
-    const callback = (payload: any) => {
-      setData(payload);
-    };
+  public static getInstance() {
+    if (!WebSocketService.instance) {
+      WebSocketService.instance = new WebSocketService();
+    }
+    return WebSocketService.instance;
+  }
 
-    ws.addCallbacks(event, callback);
+  connect() {
+    if (this.socketRef) return;
 
-    return () => {
-      ws.removeCallbacks(event, callback);
-    };
-  }, [event]);
+    this.socketRef = io(process.env.SOCKET_API_URL || "http://localhost:3000");
 
-  return data;
+    this.socketRef.on("connect", () => {
+      console.log("WebSocket connected");
+      this.isConnected = true;
+      this.reconnectAttempts = 0;
+      this.executeCallback("connect", null);
+    });
+
+    this.socketRef.on("disconnect", () => {
+      console.log("WebSocket disconnected");
+      this.isConnected = false;
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        setTimeout(() => {
+          this.reconnectAttempts++;
+          this.connect();
+        }, 2000);
+      }
+    });
+
+    this.socketRef.onAny((event, data) => {
+      this.executeCallback(event, data);
+    });
+  }
+
+  disconnect() {
+    if (this.socketRef) {
+      this.socketRef.disconnect();
+      this.socketRef = null;
+      this.isConnected = false;
+    }
+  }
+
+  emit(event: string, data: any) {
+    if (this.socketRef && this.isConnected) {
+      this.socketRef.emit(event, data);
+    }
+  }
+
+  addCallbacks(event: string, callback: Function) {
+    if (!this.callbacks[event]) {
+      this.callbacks[event] = [];
+    }
+    this.callbacks[event].push(callback);
+  }
+
+  removeCallbacks(event: string, callback: Function) {
+    if (this.callbacks[event]) {
+      this.callbacks[event] = this.callbacks[event].filter(cb => cb !== callback);
+    }
+  }
+
+  private executeCallback(event: string, data: any) {
+    if (this.callbacks[event]) {
+      this.callbacks[event].forEach(cb => cb(data));
+    }
+  }
 }
+
+export default WebSocketService.getInstance();

@@ -8,15 +8,8 @@ import {
   User,
   Monitor
 } from 'lucide-react-native';
+import { QueueItem } from '@/Interfaces/IQueue';
 
-interface QueueItem {
-  id: number;
-  number: string;
-  name: string;
-  status: 'current' | 'waiting' | 'completed';
-  doctor: string;
-  estimatedTime: string;
-}
 
 export default function Leaderboard() {
   const [queueData, setQueueData] = useState<QueueItem[]>([]);
@@ -159,7 +152,6 @@ export default function Leaderboard() {
                   <View className="flex-1">
                     <Text className="text-white text-3xl font-bold">{currentQueue.number}</Text>
                     <Text className="text-blue-100 text-lg">{currentQueue.name}</Text>
-                    <Text className="text-blue-200 text-base">{currentQueue.doctor}</Text>
                   </View>
                 </View>
                 <View className="items-end">
@@ -180,7 +172,7 @@ export default function Leaderboard() {
               <Animated.View
                 key={queue.id}
                 style={{
-                  opacity: queue.status === 'current' ? fadeAnim : 1,
+                  opacity: queue.status === 'onProcess' ? fadeAnim : 1,
                 }}
                 className="bg-white rounded-2xl p-5 shadow-md border border-gray-100"
               >
@@ -195,14 +187,13 @@ export default function Leaderboard() {
                     <View className="flex-1">
                       <View className="flex-row items-center">
                         <Text className="text-gray-800 text-xl font-bold mr-3">{queue.number}</Text>
-                        {queue.status === 'current' && (
+                        {queue.status === 'onProcess' && (
                           <View className="bg-blue-100 px-3 py-1 rounded-full">
                             <Text className="text-blue-600 text-sm font-medium">Sedang Dilayani</Text>
                           </View>
                         )}
                       </View>
                       <Text className="text-gray-600 text-base mt-1">{queue.name}</Text>
-                      <Text className="text-gray-500 text-sm">{queue.doctor}</Text>
                     </View>
                   </View>
                   

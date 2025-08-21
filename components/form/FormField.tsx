@@ -1,11 +1,9 @@
 import React from "react";
 import { Controller, FieldValues, Path, useFormContext } from "react-hook-form";
 import { VStack } from "../ui/vstack";
+import { FormFieldProps } from "@/Interfaces/IForm";
 
-interface FormFieldProps<T extends FieldValues> {
-  name: Path<T>;
-  render: (props: { value: any; onChange: (value: any) => void; onBlur: () => void }) => React.ReactNode;
-}
+
 
 export function FormField<T extends FieldValues>({ name, render }: FormFieldProps<T>) {
   const { control } = useFormContext<T>();

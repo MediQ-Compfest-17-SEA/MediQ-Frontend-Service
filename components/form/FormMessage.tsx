@@ -1,10 +1,8 @@
 import React from "react";
 import { useFormContext } from "react-hook-form";
 import { Text } from "../ui/text";
+import { FormMessageProps } from "@/Interfaces/IForm";
 
-interface FormMessageProps {
-  name: string;
-}
 
 export function FormMessage({ name }: FormMessageProps) {
   const {

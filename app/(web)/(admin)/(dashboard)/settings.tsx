@@ -10,12 +10,12 @@ import { FormField } from '@/components/form/FormField';
 import { FormLabel } from '@/components/form/FormLabel';
 import { FormMessage } from '@/components/form/FormMessage';
 import { Mail, Lock, User, Settings, Save, Shield } from "lucide-react-native"
+import { useAtom } from 'jotai';
+import { loadingAtom } from '@/utils/store';
+import { Spinner } from '@/components/ui/spinner';
+import { AdminProps } from '@/Interfaces/IAdmin';
 
-interface AdminProps {
-  name: string;
-  email: string;
-  password: string
-}
+
 
 const validationSchema = z.object({
   name: z.string().min(2).max(50),
@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const id = localStorage.getItem('id');
   const [adminProfile, setAdminProfile] = useState<AdminProps | null>(null)
   const [submit, setSubmit] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useAtom(loadingAtom)
 
   const methods = useForm({
     mode: 'onTouched',
@@ -87,8 +87,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
-        <Text className="text-gray-600">Loading...</Text>
+      <View className="flex-1 mt-20 bg-gray-50 items-center justify-center">
+        <Spinner size={32} color="#3B82F6" />
       </View>
     );
   }

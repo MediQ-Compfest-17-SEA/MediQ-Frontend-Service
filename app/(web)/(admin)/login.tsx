@@ -10,16 +10,12 @@ import { FormLabel } from "@/components/form/FormLabel";
 import { FormMessage } from "@/components/form/FormMessage";
 import { useRouter } from "expo-router";
 import axiosClient from "@/lib/axios";
+import { LoginProps } from "@/Interfaces/IAuth";
 
 const validationSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
-
-interface LoginProps {
-  email: string;
-  password: string;
-}
 
 export default function LoginPage() {
   const router = useRouter();

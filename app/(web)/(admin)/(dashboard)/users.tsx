@@ -3,24 +3,14 @@ import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'rea
 import { Text } from '@/components/ui/text';
 import { Table, Row, Rows } from 'react-native-table-component';
 import { PlusCircle, Search } from 'lucide-react-native';
+import { useAtom } from 'jotai';
+import { selectedAtom, showModalAtom, userDataAtom } from '@/utils/store';
 
-interface User {
-  id: string;
-  name: string;
-  ktp: string;
-  email: string;
-  phone: string;
-  status: string;
-}
 
-interface SelectedUser {
-  index: number;
-  data: string[];
-}
 export default function UsersPage() {
-  const [users, setUsers] = useState<string[][]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
+  const [users, setUsers] =  useAtom(userDataAtom)
+  const [showModal, setShowModal] = useAtom(showModalAtom);
+  const [selectedUser, setSelectedUser] = useAtom(selectedAtom);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Mock data - replace with API calls
@@ -43,7 +33,7 @@ export default function UsersPage() {
   };
 
   const handleEditUser = (index: number): void => {
-    setSelectedUser({ index, data: users[index] } as SelectedUser);
+    setSelectedUser({ index, data: users[index] });
     setShowModal(true);
   };
 

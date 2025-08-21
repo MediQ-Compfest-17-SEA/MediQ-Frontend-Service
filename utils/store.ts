@@ -1,6 +1,23 @@
-import {atom} from 'jotai'
+import { atomWithStorage } from 'jotai/utils';
+import {atom} from 'jotai';
 
+interface User {
+  id: string;
+  name: string;
+  ktp: string;
+  email: string;
+  phone: string;
+  status: string;
+}
 
-export const filterAtom = atom('all')
+interface SelectedUser {
+  index: number;
+  data: string[];
+}
 
-export const queueDataAtom = atom<string[][]>([]);
+export const filterAtom = atomWithStorage<string>('filter', 'all');
+export const loadingAtom = atom<boolean>(true);
+export const userDataAtom = atomWithStorage<string[][]>('userData', []);
+export const selectedAtom = atomWithStorage<SelectedUser | null>('selected', null);
+export const queueDataAtom = atomWithStorage<string[][]>('queue', []);
+export const showModalAtom = atomWithStorage<boolean>('showModal', false);

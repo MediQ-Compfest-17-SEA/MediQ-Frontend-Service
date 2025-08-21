@@ -27,31 +27,7 @@ import { FormLabel } from '@/components/form/FormLabel';
 import { VStack } from '@/components/ui/vstack';
 import { FormMessage } from '@/components/form/FormMessage';
 import { useRouter } from 'expo-router';
-
-
-interface OcrData {
-  nik: string;
-  nama: string;
-  tempat_lahir: string;
-  tgl_lahir: string;
-  jenis_kelamin: string;
-  agama: string;
-  status_perkawinan: string;
-  pekerjaan: string;
-  kewarganegaraan: string;
-  alamat: {
-    name: string;
-    rt_rw: string;
-    kel_desa: string;
-    kecamatan: string;
-    kabupaten: string;
-    provinsi: string;
-  };
-  email: string;
-  password: string;
-  jenisLayanan: string;
-
-}
+import { OcrData } from '@/Interfaces/IUser';
 
 const confirmationSchema = z.object({
   nik: z.string().length(16, 'NIK harus 16 digit'),
@@ -146,7 +122,6 @@ export default function ConfirmationScreen() {
 
   const onSubmit = async (data: OcrData) => {
     setIsSubmitting(true);
-    
     try {
       // Restructure data untuk API
       const payload = {
@@ -438,7 +413,7 @@ export default function ConfirmationScreen() {
                 <View>
                   <FormLabel>Alamat</FormLabel>
                   <FormField
-                    name="alamat_name"
+                    name="name"
                     render={({ value, onChange, onBlur }) => (
                       <TextInput
                         value={value}
@@ -449,13 +424,13 @@ export default function ConfirmationScreen() {
                       />
                     )}
                   />
-                  <FormMessage name="alamat_name" />
+                  <FormMessage name="name" />
                 </View>
 
                 <View>
                   <FormLabel>RT/RW</FormLabel>
                   <FormField
-                    name="alamat_rt_rw"
+                    name="rt_rw"
                     render={({ value, onChange, onBlur }) => (
                       <TextInput
                         value={value}
@@ -466,14 +441,14 @@ export default function ConfirmationScreen() {
                       />
                     )}
                   />
-                  <FormMessage name="alamat_rt_rw" />
+                  <FormMessage name="rt_rw" />
                 </View>
 
                 <View className="flex-row space-x-3">
                   <View className="flex-1">
                     <FormLabel>Kelurahan/Desa</FormLabel>
                     <FormField
-                      name="alamat_kel_desa"
+                      name="kel_desa"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -484,13 +459,13 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="alamat_kel_desa" />
+                    <FormMessage name="kel_desa" />
                   </View>
 
                   <View className="flex-1">
                     <FormLabel>Kecamatan</FormLabel>
                     <FormField
-                      name="alamat_kecamatan"
+                      name="kecamatan"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -501,7 +476,7 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="alamat_kecamatan" />
+                    <FormMessage name="kecamatan" />
                   </View>
                 </View>
 
@@ -509,7 +484,7 @@ export default function ConfirmationScreen() {
                   <View className="flex-1">
                     <FormLabel>Kabupaten</FormLabel>
                     <FormField
-                      name="alamat_kabupaten"
+                      name="kabupaten"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -520,13 +495,13 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="alamat_kabupaten" />
+                    <FormMessage name="kabupaten" />
                   </View>
 
                   <View className="flex-1">
                     <FormLabel>Provinsi</FormLabel>
                     <FormField
-                      name="alamat_provinsi"
+                      name="provinsi"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -537,7 +512,7 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="alamat_provinsi" />
+                    <FormMessage name="provinsi" />
                   </View>
                 </View>
               </VStack>

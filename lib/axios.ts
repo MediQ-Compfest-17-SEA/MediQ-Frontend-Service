@@ -1,26 +1,23 @@
 import axios from "axios";
-import * as SecureStore from "expo-secure-store";
 
 async function getToken() {
-  return await SecureStore.getItemAsync("token");
+  return localStorage.getItem("token") || "";
 }
 
 const axiosClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_BASE_URL,
   headers: {
     "Content-Type": "application/json",
+    "x-api-key": process.env.X_API_KEY
   },
 });
 
 axiosClient.interceptors.request.use(
   async (config) => {
-    let token = await getToken();
-    if (!token) {
-      token = localStorage.getItem("token") || "";
-    }
+    const token = getToken();
     console.log("Current token:", token);
-    if (config.headers) {
-      config.headers.Authorization = token ? `Bearer ${token}` : "";
+    if (config.headers && token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -30,4 +27,5 @@ axiosClient.interceptors.request.use(
   }
 );
 
+export { getToken };
 export default axiosClient;

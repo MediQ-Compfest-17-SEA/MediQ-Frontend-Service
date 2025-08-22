@@ -23,7 +23,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import axiosClient from '@/lib/axios';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -112,8 +112,13 @@ export default function ScanScreen() {
         name: fileName,
         type: `image/${fileType}`,
       } as any);
-      
-      const response = await axiosClient.post("/ocr/upload", formData);
+
+      const response = await axios.post(process.env.EXPO_PUBLIC_BASE_URL + "/ocr/upload", formData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-KEY': `my-very-strong-api-key`
+        }
+      });
       console.log("OCR result:", response.data);
 
       // Reset states

@@ -14,6 +14,7 @@ import { useAtom } from 'jotai';
 import { loadingAtom } from '@/utils/store';
 import { Spinner } from '@/components/ui/spinner';
 import { AdminProps } from '@/Interfaces/IAdmin';
+import React from 'react';
 
 const validationSchema = z.object({
   name: z.string().min(2).max(50),

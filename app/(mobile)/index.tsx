@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { useRouter } from "expo-router";
 import SplashScreen from "./splash";
+import React from "react";
 
 export default function IndexSplash() {
   const router = useRouter();

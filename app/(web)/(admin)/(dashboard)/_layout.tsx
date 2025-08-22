@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Platform, View, Text, Animated, TouchableOpacity } from "react-native";
 import { Href, Link, Stack } from "expo-router";
-
 import {
   Heart,
   Users,

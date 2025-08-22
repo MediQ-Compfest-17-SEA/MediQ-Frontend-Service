@@ -1,9 +1,7 @@
 
-import { io, Socket } from "socket.io-client";
-
 class WebSocketService {
   private static instance: WebSocketService | null = null;
-  private socketRef: Socket | null = null;
+  private socketRef: SocketIOClient.Socket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private callbacks: Record<string, Function[]> = {};
@@ -42,8 +40,9 @@ class WebSocketService {
       }
     });
 
-    this.socketRef.onAny((event, data) => {
-      this.executeCallback(event, data);
+    this.socketRef.on("error", (error: any) => {
+      console.error("WebSocket error:", error);
+      this.executeCallback("error", error);
     });
   }
 

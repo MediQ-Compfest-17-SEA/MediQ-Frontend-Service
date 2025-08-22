@@ -3,15 +3,37 @@ import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { ChartBar, MessageCircleX, PersonStanding, Settings } from 'lucide-react-native'
 import { useRouter } from 'expo-router';
-
+// import { exportToExcel } from '@/utils/exportToExcel';
+import { useAtom } from 'jotai';
+import { queueDataAtom, userDataAtom } from '@/utils/store';
 export default function Dashboard() {
     const router = useRouter();
+    const [users] = useAtom(userDataAtom);
+    const [queueData] = useAtom(queueDataAtom);
     const statsData = [
         { title: 'Total Users', value: '1,234', icon: 'people', color: '#3B82F6' },
         { title: 'Active Queue', value: '45', icon: 'queue', color: '#10B981' },
         { title: 'Completed Today', value: '78', icon: 'check-circle', color: '#8B5CF6' },
         { title: 'Pending', value: '12', icon: 'schedule', color: '#F59E0B' },
     ];
+    const handleExportReport = async () => {
+        // await exportToExcel({
+        //     fileName: "MediQ-Report",
+        //     sheets: [
+        //         {
+        //             name: "Users",
+        //             header: ["ID", "Name", "KTP", "Email", "Phone", "Status"],
+        //             rows: users,
+        //         },
+        //         {
+        //             name: "Queue",
+        //             header: ["Queue", "Name", "KTP", "Status", "Time", "Type"],
+        //             rows: queueData,
+        //         },
+        //     ],
+        // });
+    };
+
 
     return (
         <View className="flex-1 bg-gray-50">
@@ -68,8 +90,9 @@ export default function Dashboard() {
                             <Text className="text-white font-medium mt-2">Settings</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity className="w-[48%] bg-orange-500 rounded-lg p-4">
-                            
+                        <TouchableOpacity
+                            onPress={handleExportReport}
+                            className="w-[48%] bg-orange-500 rounded-lg p-4">
                             <ChartBar size={24} color="white" />
                             <Text className="text-white font-medium mt-2">Reports</Text>
                         </TouchableOpacity>

@@ -267,7 +267,7 @@ export default function SplashScreen() {
             Versi 1.0.0
           </Text>
           <Text className="text-gray-300 text-xs mt-1 text-center">
-            © 2024 MediQ Healthcare Solutions
+            © 2025 MediQ Healthcare Solutions
           </Text>
         </Animated.View>
       </View>

@@ -15,8 +15,6 @@ import { loadingAtom } from '@/utils/store';
 import { Spinner } from '@/components/ui/spinner';
 import { AdminProps } from '@/Interfaces/IAdmin';
 
-
-
 const validationSchema = z.object({
   name: z.string().min(2).max(50),
   email: z.string().email(),

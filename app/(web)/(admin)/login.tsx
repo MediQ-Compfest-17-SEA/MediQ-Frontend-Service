@@ -31,8 +31,10 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginProps) => {
     try {
-      const response = await axiosClient.post("/auth/login", data);
+      const response = await axiosClient.post("/auth/login/admin", data);
       console.log(response.data);
+      const token = response.data.token;
+      localStorage.setItem("token", token);
       router.push('/(web)/(admin)/(dashboard)');
     } catch (error) {
       Alert.alert("Login failed", "Please check your credentials and try again." + error);

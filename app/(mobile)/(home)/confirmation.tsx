@@ -49,7 +49,16 @@ const confirmationSchema = z.object({
   }),
   email: z.string().email('Format email tidak valid'),
   password: z.string().min(6, 'Password minimal 6 karakter'),
-  jenisLayanan: z.string().min(1, 'Pilih jenis layanan'),
+  notes: z.string().optional(),
+  institution: z.object({
+    id: z.string().min(1, 'ID institusi harus diisi'),
+    name: z.string().min(2, 'Nama institusi minimal 2 karakter'),
+    code: z.string().min(1, 'Kode institusi harus diisi'),
+    address: z.string().min(5, 'Alamat institusi minimal 5 karakter'),
+    phone: z.string().min(10, 'Nomor telepon institusi minimal 10 karakter'),
+    email: z.string().email('Format email tidak valid'),
+    type: z.string().min(1, 'Tipe institusi harus diisi'),
+  }),
 });
 
 export default function ConfirmationScreen() {
@@ -74,6 +83,16 @@ export default function ConfirmationScreen() {
       kecamatan: "ALANG-ALANG LEBAR",
       kabupaten: "OGAN ILIR",
       provinsi: "SUMATERA SELATAN"
+    },
+    notes: "Rijal Sakit Mah",
+    institution: {
+      id: "inst-001",
+      name: "RSUD Palembang",
+      code: "RSUD-001",
+      address: "Jl. Raya No. 1, Palembang",
+      phone: "0711-123456",
+      email: "info@rsudpalembang.com",
+      type: "poli gigi"
     }
   };
 
@@ -99,11 +118,19 @@ export default function ConfirmationScreen() {
       },
       email: '',
       password: '',
-      jenisLayanan: '',
+      notes: '',
+      institution: {
+        id: ocrData.institution.id,
+        name: ocrData.institution.name,
+        code: ocrData.institution.code,
+        address: ocrData.institution.address,
+        phone: ocrData.institution.phone,
+        email: ocrData.institution.email,
+      },
     },
   });
 
-  const { handleSubmit, watch } = methods;
+  const { handleSubmit } = methods;
 
   useEffect(() => {
     Animated.parallel([
@@ -144,12 +171,26 @@ export default function ConfirmationScreen() {
         },
         email: data.email,
         password: data.password,
-        jenisLayanan: data.jenisLayanan,
+        notes: data.notes,
+        institution: {
+          id: data.institution.id,
+          name: data.institution.name,
+          code: data.institution.code,
+          address: data.institution.address,
+          phone: data.institution.phone,
+          email: data.institution.email,
+        }
       };
 
       // Hit API untuk submit form
+      try{
+
+      } catch (error) {
+
+      }
+
       console.log('Submitting payload:', payload);
-      router.push('/(mobile)/(home)/waiting-list')
+      router.push('/(mobile)/(home)/waiting-list/:id')
 
     } catch (error) {
       setIsSubmitting(false);
@@ -170,6 +211,9 @@ export default function ConfirmationScreen() {
     { value: 'poli-mata', label: 'Poli Mata' },
     { value: 'apotek', label: 'Apotek' },
   ];
+  const jenisinstitusiOptions = [
+    { }
+  ]
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -413,7 +457,7 @@ export default function ConfirmationScreen() {
                 <View>
                   <FormLabel>Alamat</FormLabel>
                   <FormField
-                    name="name"
+                    name="alamat.name"
                     render={({ value, onChange, onBlur }) => (
                       <TextInput
                         value={value}
@@ -424,13 +468,13 @@ export default function ConfirmationScreen() {
                       />
                     )}
                   />
-                  <FormMessage name="name" />
+                  <FormMessage name="alamat.name" />
                 </View>
 
                 <View>
                   <FormLabel>RT/RW</FormLabel>
                   <FormField
-                    name="rt_rw"
+                    name="alamat.rt_rw"
                     render={({ value, onChange, onBlur }) => (
                       <TextInput
                         value={value}
@@ -441,14 +485,14 @@ export default function ConfirmationScreen() {
                       />
                     )}
                   />
-                  <FormMessage name="rt_rw" />
+                  <FormMessage name="alamat.rt_rw" />
                 </View>
 
                 <View className="flex-row space-x-3">
                   <View className="flex-1">
                     <FormLabel>Kelurahan/Desa</FormLabel>
                     <FormField
-                      name="kel_desa"
+                      name="alamat.kel_desa"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -459,13 +503,13 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="kel_desa" />
+                    <FormMessage name="alamat.kel_desa" />
                   </View>
 
                   <View className="flex-1">
                     <FormLabel>Kecamatan</FormLabel>
                     <FormField
-                      name="kecamatan"
+                      name="alamat.kecamatan"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -476,7 +520,7 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="kecamatan" />
+                    <FormMessage name="alamat.kecamatan" />
                   </View>
                 </View>
 
@@ -484,7 +528,7 @@ export default function ConfirmationScreen() {
                   <View className="flex-1">
                     <FormLabel>Kabupaten</FormLabel>
                     <FormField
-                      name="kabupaten"
+                      name="alamat.kabupaten"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -495,13 +539,13 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="kabupaten" />
+                    <FormMessage name="alamat.kabupaten" />
                   </View>
 
                   <View className="flex-1">
                     <FormLabel>Provinsi</FormLabel>
                     <FormField
-                      name="provinsi"
+                      name="alamat.provinsi"
                       render={({ value, onChange, onBlur }) => (
                         <TextInput
                           value={value}
@@ -512,7 +556,7 @@ export default function ConfirmationScreen() {
                         />
                       )}
                     />
-                    <FormMessage name="provinsi" />
+                    <FormMessage name="alamat.provinsi" />
                   </View>
                 </View>
               </VStack>

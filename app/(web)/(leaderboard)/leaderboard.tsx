@@ -9,6 +9,7 @@ import {
   Monitor
 } from 'lucide-react-native';
 import { QueueItem } from '@/Interfaces/IQueue';
+import useWebSocket from '@/hooks/useWebSocket';
 
 
 export default function Leaderboard() {
@@ -30,8 +31,8 @@ export default function Leaderboard() {
   ];
 
   useEffect(() => {
-    // Setup WebSocket connection
-
+    
+    
     // Update current time every second
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date());

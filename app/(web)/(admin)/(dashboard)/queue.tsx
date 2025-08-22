@@ -4,8 +4,9 @@ import { Text } from '@/components/ui/text';
 import { Table, Row, Rows } from 'react-native-table-component';
 import { ArrowBigDownDashIcon, PauseCircle, PlusCircle, RefreshCcw } from 'lucide-react-native';
 import { filterAtom, loadingAtom, queueDataAtom } from '../../../../utils/store';
-import { useAtom } from 'jotai'; 
+import { useAtom } from 'jotai';
 import { Spinner } from '@/components/ui/spinner';
+import useWebSocket from '@/hooks/useWebSocket';
 
 
 export default function QueueScreen() {
@@ -36,13 +37,17 @@ export default function QueueScreen() {
   const widthArr = [60, 120, 140, 80, 70, 80];
 
   useEffect(() => {
-    // Setup socket.io for real-time updates
-    // socket.on('queueUpdate', (data) => {
-    //   setQueueData(data);
-    // });
-
-    setQueueData(mockQueueData);
-    setLoading(false)
+    useWebSocket.connect()
+    const handleQueueUpdate = (data: any[]) => {
+      console.log("Queue update:", data);
+      setQueueData(data);
+      setLoading(false);
+    };
+    useWebSocket.addCallbacks("queueUpdate", handleQueueUpdate);
+    useWebSocket.emit("getQueue", null);
+    return () => {
+      useWebSocket.removeCallbacks("queueUpdate", handleQueueUpdate);
+    };
   }, []);
 
 
@@ -51,7 +56,7 @@ export default function QueueScreen() {
     return item[3]?.toLowerCase() === filter;
   });
 
-  if (loading){
+  if (loading) {
     return (
       <View className="flex-1 mt-20  items-center justify-center">
         <Spinner size={32} color="#3B82F6" />
@@ -96,7 +101,6 @@ export default function QueueScreen() {
       {/* Table */}
       <View
         style={{ flex: 1, padding: 4 }}
-
       >
         <View className="bg-white rounded-xl shadow-sm border border-gray-100" style={{ elevation: 2 }}>
           <Table borderStyle={{ borderWidth: 0 }}>

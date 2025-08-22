@@ -89,7 +89,7 @@ export default function LandingScreen() {
           >
             <View className='flex flex-col items-center justify-center gap-3'>
               <TouchableOpacity
-                onPress={() => router.push('/(mobile)/(home)/waiting-list')}
+                onPress={() => router.push('/(mobile)/(home)/waiting-list/:id')}
                 className="bg-white rounded-full px-10 py-5 shadow-lg active:scale-95 w-full"
               >
                 <View className="flex-row items-center justify-center">
@@ -285,7 +285,7 @@ export default function LandingScreen() {
         >
           {isOCRRegister ? (
             <TouchableOpacity
-              onPress={() => router.push('/(mobile)/(home)/waiting-list')}
+              onPress={() => router.push('/(mobile)/(home)/waiting-list/:id')}
               className="bg-blue-500 rounded-full py-4 px-6 active:scale-95"
             >
               <View className="flex-row items-center justify-center">

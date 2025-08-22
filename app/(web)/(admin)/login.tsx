@@ -41,6 +41,7 @@ export default function LoginPage() {
       router.push('/(web)/(admin)/(dashboard)');
     } catch (error) {
       Alert.alert("Login failed", "Please check your credentials and try again." + error);
+      
       console.log(error);
     } finally {
       setIsLoading(false);
@@ -120,7 +121,10 @@ export default function LoginPage() {
 
             {/* Login Button */}
             <TouchableOpacity
-              onPress={methods.handleSubmit(onSubmit)}
+              onPress={methods.handleSubmit(onSubmit, (errors) => {
+                console.log("Form validation errors:", errors);
+                Alert.alert("Form Error", "Ada field yang belum diisi dengan benar");
+              })}
               className="mt-6 bg-blue-500 rounded-lg py-3 shadow-sm"
             >
               <Text className="text-white text-center font-semibold text-sm">

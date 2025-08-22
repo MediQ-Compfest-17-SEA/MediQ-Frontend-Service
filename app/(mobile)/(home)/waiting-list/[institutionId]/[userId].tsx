@@ -22,6 +22,7 @@ import { useAtom } from 'jotai';
 import { loadingAtom, userQueueAtom } from '@/utils/store';
 import { useLocalSearchParams } from 'expo-router';
 import { QueueItem } from '@/Interfaces/IQueue';
+import socket from '@/lib/socket';
 
 export default function WaitingListScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -30,55 +31,67 @@ export default function WaitingListScreen() {
   const [refreshRotation] = useState(new Animated.Value(0));
   const { userId, institutionId } = useLocalSearchParams<{ userId: string, institutionId: string }>();
   const [queueData, setQueueData] = useAtom(userQueueAtom);
-  const [loading, setLoading] = useAtom(loadingAtom)
+  const [loading, setLoading] = useAtom(loadingAtom);
 
-  const currentUser = queueData.find((item) => item.id === userId)
+  const currentUser = queueData.find((item) => item.id === userId);
   const waitingUsers = queueData.filter((user: QueueItem) => user.status === 'waiting');
   const currentUserIndex = waitingUsers.findIndex(user => user.id === currentUser?.id);
   const remainingQueue = currentUserIndex >= 0 ? currentUserIndex : 0;
 
-
-  const calculateTotalEstimatedTime = () => {
-    let totalMinutes = 0;
-
-    // Hitung waktu untuk antrian yang masih waiting sebelum user ini
-    for (let i = 0; i < remainingQueue; i++) {
-      const estimatedTime = waitingUsers[i].estimatedTime;
-      const minutes = parseInt(estimatedTime.replace(/\D/g, '')) || 0;
-      totalMinutes += minutes;
-    }
-
-    // Tambah estimasi waktu user ini sendiri
-    const userEstimatedTime = parseInt((currentUser?.estimatedTime ?? '').replace(/\D/g, '')) || 0;
-    totalMinutes += userEstimatedTime;
-
-    // Konversi ke jam dan menit
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours > 0) {
-      return `${hours} jam ${minutes} menit`;
-    }
-    return `${minutes} menit`;
-  };
   const queueList = async () => {
     setLoading(true);
     try {
-      const response = await axiosClient.get('/queue');
-      console.log(response.data)
+      const response = await axiosClient.get(`/queue?institutionId=${institutionId}`);
+      console.log(response.data);
       setQueueData(response.data);
       return response.data;
     } catch (e) {
-      console.error("Error fetching queue data:", e);
-
+      console.error("Error Queue fetching queue data:", e);
+    } finally {
       setLoading(false);
     }
   }
 
-
   useEffect(() => {
     //render list
     queueList();
+    
+    // Initialize WebSocket connection
+    socket.connect();
+    
+    // Subscribe to queue updates
+    const handleQueueUpdate = (data: any) => {
+      console.log('Queue updated:', data);
+      if (data.institutionId === institutionId) {
+        setQueueData(data.queueData || data);
+      }
+    };
+    
+    const handleQueueReady = (data: any) => {
+      console.log('Queue ready for user:', data);
+      
+      if (data.userId === userId) {
+        // Refresh queue data when user's turn is ready
+        queueList();
+      }
+    };
+    
+    const handleQueueAlmostReady = (data: any) => {
+      console.log('Queue almost ready for user:', data);
+      if (data.userId === userId) {
+        // Show notification or update UI for almost ready
+        queueList();
+      }
+    };
+    
+    // Add event listeners
+    socket.addCallbacks('queue_update', handleQueueUpdate);
+    socket.addCallbacks('queue_ready', handleQueueReady);
+    socket.addCallbacks('queue_almost_ready', handleQueueAlmostReady);
+    
+    // Subscribe to notifications
+    socket.subscribeToNotifications(userId, institutionId);
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -99,7 +112,15 @@ export default function WaitingListScreen() {
         Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ])
     ).start();
-  }, [fadeAnim, slideAnim, pulseAnim]);
+
+    // Cleanup on unmount
+    return () => {
+      socket.removeCallbacks('queue_update', handleQueueUpdate);
+      socket.removeCallbacks('queue_ready', handleQueueReady);
+      socket.removeCallbacks('queue_almost_ready', handleQueueAlmostReady);
+      socket.unsubscribeFromNotifications(userId, institutionId);
+    };
+  }, [fadeAnim, slideAnim, pulseAnim, userId, institutionId]);
 
   const handleRefresh = () => {
     Animated.timing(refreshRotation, {
@@ -176,7 +197,7 @@ export default function WaitingListScreen() {
       </Animated.View>
 
       {/* Current Queue Info */}
-      {loading && (
+      {!loading && currentUser && (
         <Animated.View
           style={{
             opacity: fadeAnim,
@@ -205,48 +226,26 @@ export default function WaitingListScreen() {
                 <Text className="text-gray-500 text-xs mb-1">Nomor Anda</Text>
                 <Text className="text-gray-800 text-lg font-bold">{currentUser?.number}</Text>
               </View>
-              {/* Queue Information */}
-              <View className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Remaining Queue */}
-                <View className="bg-white rounded-lg shadow-md p-6">
-                  <Text className="text-lg font-semibold text-gray-900 mb-4">Informasi Antrian</Text>
-                  <View className="space-y-4">
-                    <View className="flex justify-between items-center">
-                      <Text className="text-gray-600">Sisa Antrian</Text>
-                      <Text className="text-2xl font-bold text-blue-600">
-                        {currentUser?.status === 'waiting' ? remainingQueue :
-                          currentUser?.status === 'onProcess' ? 0 : 'Selesai'}
-                      </Text>
-                    </View>
-                    <View className="flex justify-between items-center">
-                      <Text className="text-gray-600">Posisi dalam Antrian</Text>
-                      <Text className="text-lg font-semibold">
-                        {currentUser?.status === 'waiting' ? `${remainingQueue + 1} dari ${waitingUsers.length}` :
-                          currentUser?.status === 'onProcess' ? 'Sedang Diproses' : 'Selesai'}
-                      </Text>
-                    </View>
-                  </View>
+              
+              <View className="items-center">
+                <View className="w-12 h-12 bg-blue-50 rounded-xl items-center justify-center mb-2">
+                  <Clock size={20} color="#3B82F6" />
                 </View>
+                <Text className="text-gray-500 text-xs mb-1">Sisa Antrian</Text>
+                <Text className="text-gray-800 text-lg font-bold">
+                  {currentUser?.status === 'waiting' ? remainingQueue :
+                   currentUser?.status === 'onProcess' ? 0 : 'Selesai'}
+                </Text>
+              </View>
 
-                {/* Estimated Time */}
-                <View className="bg-white rounded-lg shadow-md p-6">
-                  <Text className="text-lg font-semibold text-gray-900 mb-4">Estimasi Waktu</Text>
-                  <View className="space-y-4">
-                    <View className="flex justify-between items-center">
-                      <Text className="text-gray-600">Waktu Perkiraan</Text>
-                      <Text className="text-lg font-semibold text-green-600">
-                        {currentUser?.estimatedTime}
-                      </Text>
-                    </View>
-                    <View className="flex justify-between items-center">
-                      <Text className="text-gray-600">Total Estimasi</Text>
-                      <Text className="text-lg font-semibold text-orange-600">
-                        {currentUser?.status === 'waiting' ? calculateTotalEstimatedTime() :
-                          currentUser?.status === 'onProcess' ? currentUser.estimatedTime : 'Selesai'}
-                      </Text>
-                    </View>
-                  </View>
+              <View className="items-center">
+                <View className="w-12 h-12 bg-green-50 rounded-xl items-center justify-center mb-2">
+                  <Activity size={20} color="#10B981" />
                 </View>
+                <Text className="text-gray-500 text-xs mb-1">Estimasi</Text>
+                <Text className="text-gray-800 text-lg font-bold">
+                  {currentUser?.estimatedTime || 'N/A'}
+                </Text>
               </View>
             </View>
           </View>
@@ -269,9 +268,11 @@ export default function WaitingListScreen() {
         >
           {queueData && Array.isArray(queueData) && queueData.map((item, index) => (
             <View
-              key={item.number}
-              className={`bg-white rounded-xl p-4 mb-3 shadow-sm ${item.status === 'onProcess' ? 'border-2 border-red-200' : ''
-                }`}
+              key={item.id}
+              className={`bg-white rounded-xl p-4 mb-3 shadow-sm ${
+                item.id === userId ? 'border-2 border-blue-200' : 
+                item.status === 'onProcess' ? 'border-2 border-red-200' : ''
+              }`}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center flex-1">
@@ -283,6 +284,11 @@ export default function WaitingListScreen() {
                       {item.number}
                     </Text>
                     <Text className="text-gray-600 text-sm">{item.name}</Text>
+                    {item.estimatedTime && (
+                      <Text className="text-gray-500 text-xs mt-1">
+                        Estimasi: {item.estimatedTime}
+                      </Text>
+                    )}
                   </View>
                 </View>
 
@@ -295,7 +301,7 @@ export default function WaitingListScreen() {
                     </Text>
                   </View>
 
-                  {item.status === 'onProcess' && (
+                  {item.status === 'onProcess' && item.id === userId && (
                     <TouchableOpacity className="flex-row items-center mt-2">
                       <Text className="text-red-500 text-sm font-medium mr-1">
                         Masuk Sekarang
@@ -318,7 +324,7 @@ export default function WaitingListScreen() {
         <View className="flex-row items-center justify-center">
           <Activity size={16} color="#10B981" />
           <Text className="text-gray-600 text-sm ml-2">
-            Antrian diperbarui secara otomatis setiap 30 detik
+            Antrian diperbarui secara real-time via websocket
           </Text>
         </View>
       </Animated.View>

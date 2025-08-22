@@ -78,7 +78,7 @@ export default function SettingsPage() {
       Alert.alert("Success", "Profile updated successfully.");
     } catch (error) {
       Alert.alert("Error", "Failed to update profile. Please try again later.");
-      console.log(error)
+      console.log('Error Settings Page' + error)
     } finally {
       setSubmit(false);
     }

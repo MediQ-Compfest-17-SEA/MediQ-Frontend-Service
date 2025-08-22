@@ -6,9 +6,8 @@ import { ArrowBigDownDashIcon, PauseCircle, PlusCircle, RefreshCcw } from 'lucid
 import { filterAtom, loadingAtom, queueDataAtom } from '../../../../utils/store';
 import { useAtom } from 'jotai';
 import { Spinner } from '@/components/ui/spinner';
-import useWebSocket from '@/hooks/useWebSocket';
-
-
+import socket from '@/lib/socket';
+import { QueueItem } from '@/Interfaces/IQueue';
 export default function QueueScreen() {
   const [queueData, setQueueData] = useAtom(queueDataAtom);
   const [filter, setFilter] = useAtom(filterAtom);
@@ -37,16 +36,16 @@ export default function QueueScreen() {
   const widthArr = [60, 120, 140, 80, 70, 80];
 
   useEffect(() => {
-    useWebSocket.connect()
-    const handleQueueUpdate = (data: any[]) => {
+    socket.connect()
+    const handleQueueUpdate = (data: QueueItem[]) => {
       console.log("Queue update:", data);
-      setQueueData(data);
+      // setQueueData(data);
       setLoading(false);
     };
-    useWebSocket.addCallbacks("queueUpdate", handleQueueUpdate);
-    useWebSocket.emit("getQueue", null);
+    socket.addCallbacks("queueUpdate", handleQueueUpdate);
+    socket.emit("getQueue", null);
     return () => {
-      useWebSocket.removeCallbacks("queueUpdate", handleQueueUpdate);
+      socket.removeCallbacks("queueUpdate", handleQueueUpdate);
     };
   }, []);
 

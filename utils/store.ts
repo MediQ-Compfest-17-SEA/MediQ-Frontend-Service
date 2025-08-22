@@ -21,3 +21,4 @@ export const showActionDialogAtom = atom(false);
 export const actionIndexAtom = atom<number | null>(null);
 
 export const ocrDataAtom = atomWithStorage<OcrData | null>('ocrData', null);
+export const statusQueueAtom = atomWithStorage<QueueItem[]>('queue', []);

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, Platform, Pressable, Modal } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, Platform, Pressable, Modal, Alert } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Table, Row, Rows } from 'react-native-table-component';
 import { PlusCircle, Search } from 'lucide-react-native';
 import { useAtom } from 'jotai';
-import { actionIndexAtom, deleteIndexAtom, selectedAtom, showActionDialogAtom, showDeleteDialogAtom, showModalAtom, userDataAtom } from '@/utils/store';
+import { actionIndexAtom, deleteIndexAtom, selectedAtom, showActionDialogAtom, showDeleteDialogAtom, showModalAtom, userDataAtom, loadingAtom } from '@/utils/store';
 import { Form } from "@/components/form/Form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -14,6 +14,8 @@ import { FormField } from "@/components/form/FormField";
 import { FormLabel } from "@/components/form/FormLabel";
 import { FormMessage } from "@/components/form/FormMessage";
 import { UserFormData } from '@/Interfaces/IUser';
+import axios from 'axios';
+import axiosClient from '@/lib/axios';
 
 // Validation schema for user form
 const userValidationSchema = z.object({
@@ -37,7 +39,6 @@ const userValidationSchema = z.object({
 });
 
 
-
 export default function UsersPage() {
   const [users, setUsers] = useAtom(userDataAtom)
   const [showModal, setShowModal] = useAtom(showModalAtom);
@@ -46,6 +47,7 @@ export default function UsersPage() {
   const [showActionDialog, setShowActionDialog] = useAtom(showActionDialogAtom);
   const [deleteIndex, setDeleteIndex] = useAtom(deleteIndexAtom);
   const [actionIndex, setActionIndex] = useAtom(actionIndexAtom);
+  const [loading, setLoading] = useAtom(loadingAtom);
 
   const methods = useForm<UserFormData>({
     resolver: zodResolver(userValidationSchema),
@@ -73,31 +75,197 @@ export default function UsersPage() {
     shouldUnregister: false,
   });
 
-  // Mock data - replace with API calls
-  const mockUsers = [
-    ['1', 'John Doe', '1234567890123456', 'john@email.com', '08123456789', 'Active'],
-    ['2', 'Jane Smith', '2345678901234567', 'jane@email.com', '08234567890', 'Active'],
-    ['3', 'Bob Johnson', '3456789012345678', 'bob@email.com', '08345678901', 'Inactive'],
-  ];
+  const { reset } = methods;
 
   const tableHead = ['ID', 'Name', 'KTP', 'Email', 'Phone', 'Status'];
   const widthArr = [50, 120, 140, 150, 120, 80];
 
+  // API Functions
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosClient.get(`/users`);
+      if (response.data && response.data.data) {
+        // Transform API response to table format
+        const transformedUsers = response.data.data.map((user: any) => [
+          user.id?.toString() || '',
+          user.nama || '',
+          user.nik || '',
+          user.email || 'N/A',
+          user.phone || 'N/A',
+          user.status || 'Active'
+        ]);
+        setUsers(transformedUsers);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      Alert.alert('Error', 'Failed to fetch users');
+      // Fallback to mock data
+      const mockUsers = [
+        ['1', 'John Doe', '1234567890123456', 'john@email.com', '08123456789', 'Active'],
+        ['2', 'Jane Smith', '2345678901234567', 'jane@email.com', '08234567890', 'Active'],
+        ['3', 'Bob Johnson', '3456789012345678', 'bob@email.com', '08345678901', 'Inactive'],
+      ];
+      setUsers(mockUsers);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createUser = async (userData: UserFormData) => {
+    setLoading(true);
+    try {
+      // Transform form data to API payload format
+      const payload = {
+        nik: userData.nik,
+        nama: userData.nama,
+        tempat_lahir: userData.tempat_lahir,
+        tgl_lahir: userData.tgl_lahir,
+        jenis_kelamin: userData.jenis_kelamin,
+        alamat: userData.alamat.name,
+        rt_rw: userData.alamat.rt_rw,
+        kel_desa: userData.alamat.kel_desa,
+        kecamatan: userData.alamat.kecamatan,
+        kabupaten: userData.alamat.kabupaten,
+        provinsi: userData.alamat.provinsi,
+        agama: userData.agama,
+        status_perkawinan: userData.status_perkawinan,
+        pekerjaan: userData.pekerjaan,
+        kewarganegaraan: userData.kewarganegaraan
+      };
+
+      const response = await axios.post(`/users`, payload)
+      if (response.data && response.data.success) {
+        Alert.alert('Success', 'User created successfully');
+        await fetchUsers(); // Refresh the user list
+        return true;
+      } else {
+        throw new Error('Failed to create user');
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      Alert.alert('Error', 'Failed to create user');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUser = async (userId: string, userData: UserFormData) => {
+    setLoading(true);
+    try {
+      // Transform form data to API payload format
+      const payload = {
+        nik: userData.nik,
+        nama: userData.nama,
+        tempat_lahir: userData.tempat_lahir,
+        tgl_lahir: userData.tgl_lahir,
+        jenis_kelamin: userData.jenis_kelamin,
+        alamat: userData.alamat.name,
+        rt_rw: userData.alamat.rt_rw,
+        kel_desa: userData.alamat.kel_desa,
+        kecamatan: userData.alamat.kecamatan,
+        kabupaten: userData.alamat.kabupaten,
+        provinsi: userData.alamat.provinsi,
+        agama: userData.agama,
+        status_perkawinan: userData.status_perkawinan,
+        pekerjaan: userData.pekerjaan,
+        kewarganegaraan: userData.kewarganegaraan
+      };
+
+      const response = await axios.put(`/users/${userId}`, payload);
+
+      if (response.data && response.data.success) {
+        Alert.alert('Success', 'User updated successfully');
+        await fetchUsers(); // Refresh the user list
+        return true;
+      } else {
+        throw new Error('Failed to update user');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      Alert.alert('Error', 'Failed to update user');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    setLoading(true);
+    try {
+      const response = await axios.delete(`/users/${userId}`);
+      if (response.data && response.data.success) {
+        Alert.alert('Success', 'User deleted successfully');
+        await fetchUsers();
+        return true;
+      } else {
+        throw new Error('Failed to delete user');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      Alert.alert('Error', 'Failed to delete user');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setUsers(mockUsers);
+    fetchUsers();
   }, []);
 
-
   const handleAddUser = () => {
-    if(showModal) return;
+    if (showModal) return;
+
     setSelectedUser(null);
+    reset({
+      nik: '',
+      nama: '',
+      tempat_lahir: '',
+      tgl_lahir: '',
+      jenis_kelamin: '',
+      agama: '',
+      status_perkawinan: '',
+      pekerjaan: '',
+      kewarganegaraan: '',
+      alamat: {
+        name: '',
+        rt_rw: '',
+        kel_desa: '',
+        kecamatan: '',
+        kabupaten: '',
+        provinsi: ''
+      }
+    });
     setShowModal(true);
-    console.log('Adding new user');
   };
 
   const handleEditUser = (index: number): void => {
-    if(showModal)return
-    setSelectedUser({ index, data: users[index] });
+    if (showModal) return;
+
+    const user = users[index];
+    setSelectedUser({ index, data: user });
+    reset({
+      nik: user[2] || '',
+      nama: user[1] || '',
+      tempat_lahir: '',
+      tgl_lahir: '',
+      jenis_kelamin: '',
+      agama: '',
+      status_perkawinan: '',
+      pekerjaan: '',
+      kewarganegaraan: '',
+      alamat: {
+        name: '',
+        rt_rw: '',
+        kel_desa: '',
+        kecamatan: '',
+        kabupaten: '',
+        provinsi: ''
+      }
+    });
+
     setShowModal(true);
   };
 
@@ -106,10 +274,16 @@ export default function UsersPage() {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = (): void => {
-    if (deleteIndex !== null) {
-      const newUsers = users.filter((_, i) => i !== deleteIndex);
-      setUsers(newUsers);
+  const confirmDelete = async () => {
+    console.log('deleted with', users);
+    if (deleteIndex !== null && deleteIndex < users.length) {
+      const userId = users[deleteIndex][0]; // Get user ID
+      const success = await deleteUser(userId);
+
+      if (success) {
+        const newUsers = users.filter((_, i) => i !== deleteIndex);
+        setUsers(newUsers);
+      }
     }
     setShowDeleteDialog(false);
     setDeleteIndex(null);
@@ -118,41 +292,24 @@ export default function UsersPage() {
   const handleRowPress = (index: number): void => {
     setActionIndex(index);
     setShowActionDialog(true);
-    console.log('clicked row press', index)
   };
 
-  const handleSaveUser = (data: UserFormData): void => {
+  const handleSaveUser = async (data: UserFormData): Promise<void> => {
     console.log('Saving user with form data:', data);
-
+    let success = false;
     if (selectedUser) {
-      // Update existing user
-      const updatedUsers = [...users];
-      updatedUsers[selectedUser.index] = [
-        users[selectedUser.index][0], // Keep ID
-        data.nama,
-        data.nik,
-        users[selectedUser.index][3], // Keep email
-        users[selectedUser.index][4], // Keep phone
-        users[selectedUser.index][5], // Keep status
-      ];
-      setUsers(updatedUsers);
+      const userId = users[selectedUser.index][0];
+      success = await updateUser(userId, data);
     } else {
-      // Add new user
-      const newUser = [
-        String(users.length + 1), // Generate new ID
-        data.nama,
-        data.nik,
-        'new@email.com', // Default email
-        '081234567890', // Default phone
-        'Active'
-      ];
-      setUsers([...users, newUser]);
+      success = await createUser(data);
     }
 
-    setShowModal(false);
-    methods.reset();
+    if (success) {
+      setShowModal(false);
+      reset();
+    }
   };
-  
+
   const UserModal = () => (
     <Modal
       visible={showModal}
@@ -532,12 +689,14 @@ export default function UsersPage() {
                 key={index}
                 onPress={() => handleRowPress(index)}
               >
-                <Row
-                  data={user}
-                  style={{ height: 60, backgroundColor: index % 2 ? '#FAFAFA' : 'white' }}
-                  textStyle={{ textAlign: 'center', paddingVertical: 8 }}
-                  widthArr={widthArr}
-                />
+                {loading ?? (
+                  <Row
+                    data={user}
+                    style={{ height: 60, backgroundColor: index % 2 ? '#FAFAFA' : 'white' }}
+                    textStyle={{ textAlign: 'center', paddingVertical: 8 }}
+                    widthArr={widthArr}
+                  />
+                )}
               </Pressable>
             ))}
           </Table>

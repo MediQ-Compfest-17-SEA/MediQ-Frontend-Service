@@ -1,21 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, Platform, View, Text, Animated, TouchableOpacity } from "react-native";
-import { Href, Link, Stack } from "expo-router";
+import { getToken } from "@/lib/axios";
+import { Href, Link, Stack, usePathname, useRouter } from "expo-router";
 import {
-  Heart,
-  Users,
-  Clock,
   BarChart3,
-  Settings,
   Bell,
-  ChevronRight
+  ChevronRight,
+  Clock,
+  Heart,
+  Settings,
+  Users
 } from 'lucide-react-native';
-import { usePathname } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Animated, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 export default function AdminLayout() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(-20));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
 
   const menus = [
     { name: "Dashboard", icon: BarChart3, href: "/(web)/(admin)/(dashboard)" },
@@ -25,20 +29,58 @@ export default function AdminLayout() {
     { name: "Leaderboard", icon: Heart, href: "/(web)/(leaderboard)/leaderboard" },
   ];
 
+  // Auth check
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, slideAnim]);
+    const checkAuth = async () => {
+      try {
+        const token = await getToken();
+        if (!token) {
+          router.replace('/(web)/(admin)/login');
+          return;
+        }
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        router.replace('/(web)/(admin)/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Animation effect
+  useEffect(() => {
+    if (isAuthenticated) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isAuthenticated, fadeAnim, slideAnim]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <Text className="text-gray-600">Loading...</Text>
+      </View>
+    );
+  }
+
+  // Not authenticated
+  if (!isAuthenticated) {
+    return null; // Will redirect to login
+  }
 
   if (Platform.OS === "web") {
     return (

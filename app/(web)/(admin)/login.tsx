@@ -1,17 +1,17 @@
 import { Form } from "@/components/form/Form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { View, Text, TextInput, TouchableOpacity, StatusBar, Alert } from "react-native";
-import { VStack } from "@/components/ui/vstack";
-import { Heart, Lock, Mail } from "lucide-react-native";
-import z from "zod";
 import { FormField } from "@/components/form/FormField";
 import { FormLabel } from "@/components/form/FormLabel";
 import { FormMessage } from "@/components/form/FormMessage";
-import { useRouter } from "expo-router";
-import axiosClient from "@/lib/axios";
+import { VStack } from "@/components/ui/vstack";
 import { LoginProps } from "@/Interfaces/IAuth";
-import React from "react";
+import axiosClient from "@/lib/axios";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "expo-router";
+import { Heart, Lock, Mail } from "lucide-react-native";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Alert, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
+import z from "zod";
 
 const validationSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -19,6 +19,7 @@ const validationSchema = z.object({
 });
 
 export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const methods = useForm({
     resolver: zodResolver(validationSchema),
@@ -31,15 +32,18 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginProps) => {
+    setIsLoading(true);
     try {
       const response = await axiosClient.post("/auth/login/admin", data);
-      console.log(response.data);
       const token = response.data.token;
       localStorage.setItem("token", token);
+      localStorage.setItem("id", response.data.id);
       router.push('/(web)/(admin)/(dashboard)');
     } catch (error) {
       Alert.alert("Login failed", "Please check your credentials and try again." + error);
       console.log(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,7 +124,7 @@ export default function LoginPage() {
               className="mt-6 bg-blue-500 rounded-lg py-3 shadow-sm"
             >
               <Text className="text-white text-center font-semibold text-sm">
-                Masuk
+                {isLoading ? "Loading..." : "Masuk"}
               </Text>
             </TouchableOpacity>
           </View>

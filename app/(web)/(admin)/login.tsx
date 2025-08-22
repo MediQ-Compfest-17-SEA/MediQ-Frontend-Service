@@ -35,7 +35,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await axiosClient.post("/auth/login/admin", data);
-      const token = response.data.token;
+      const token = response.data.accessToken;
       localStorage.setItem("token", token);
       localStorage.setItem("id", response.data.id);
       router.push('/(web)/(admin)/(dashboard)');

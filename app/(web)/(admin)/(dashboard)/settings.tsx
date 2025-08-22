@@ -1,20 +1,20 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { View, Text, Alert, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-import { useState, useEffect } from 'react';
-import z from 'zod';
-import axiosClient from '@/lib/axios';
 import { Form } from '@/components/form/Form';
-import { VStack } from '@/components/ui/vstack';
 import { FormField } from '@/components/form/FormField';
 import { FormLabel } from '@/components/form/FormLabel';
 import { FormMessage } from '@/components/form/FormMessage';
-import { Mail, Lock, User, Settings, Save, Shield } from "lucide-react-native"
-import { useAtom } from 'jotai';
-import { loadingAtom } from '@/utils/store';
 import { Spinner } from '@/components/ui/spinner';
+import { VStack } from '@/components/ui/vstack';
 import { AdminProps } from '@/Interfaces/IAdmin';
-import React from 'react';
+import axiosClient from '@/lib/axios';
+import { loadingAtom } from '@/utils/store';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'expo-router';
+import { useAtom } from 'jotai';
+import { Lock, LogOut, Mail, Save, Settings, Shield, User } from "lucide-react-native";
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import z from 'zod';
 
 const validationSchema = z.object({
   name: z.string().min(2).max(50),
@@ -24,6 +24,7 @@ const validationSchema = z.object({
 
 export default function SettingsPage() {
   const id = localStorage.getItem('id');
+  const router = useRouter();
   const [adminProfile, setAdminProfile] = useState<AdminProps | null>(null)
   const [submit, setSubmit] = useState<boolean>(false);
   const [loading, setLoading] = useAtom(loadingAtom)
@@ -83,6 +84,38 @@ export default function SettingsPage() {
       setSubmit(false);
     }
   }
+
+  const handleLogout = async () => {
+    setSubmit(true);
+    try {
+      const token = localStorage.getItem('token');
+      console.log("Token before logout:", token);
+
+      if (!token) {
+        console.log("No token found, performing local logout");
+        localStorage.removeItem('token');
+        localStorage.removeItem('id');
+        router.push('/(web)/(admin)/login');
+        return;
+      }
+
+      try {
+        await axiosClient.get('/auth/logout');
+        console.log("Server logout successful");
+      } catch (logoutError: any) {
+        console.log("Server logout failed:", logoutError.response?.data);
+      }
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('id');
+      router.push('/(web)/(admin)/login');
+    } catch (error) {
+      Alert.alert("Error", "Failed to logout. Please try again later.");
+      console.log(error);
+    } finally {
+      setSubmit(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -208,6 +241,19 @@ export default function SettingsPage() {
               <Save size={20} color="white" />
               <Text className="text-white text-center font-semibold text-base ml-2">
                 {submit ? 'Saving...' : 'Save Changes'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Logout Button */}
+            <TouchableOpacity
+              onPress={handleLogout}
+              disabled={submit}
+              className={`mt-4 rounded-lg py-4 shadow-sm flex-row items-center justify-center ${submit ? 'bg-gray-400' : 'bg-red-500'
+                }`}
+            >
+              <LogOut size={20} color="white" />
+              <Text className="text-white text-center font-semibold text-base ml-2">
+                {submit ? 'Logging out...' : 'Logout'}
               </Text>
             </TouchableOpacity>
           </Form>

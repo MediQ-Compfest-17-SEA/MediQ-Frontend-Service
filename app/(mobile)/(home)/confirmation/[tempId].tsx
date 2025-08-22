@@ -180,7 +180,7 @@ export default function ConfirmationScreen() {
       return response.data.data.result;
     } catch (err) {
       Alert.alert('Error', 'Gagal menyimpan data.');
-      console.error('Error Page Confirmation:', err);
+      console.log('Error Page Confirmation:', err);
     } finally {
       setLoading(false);
     }

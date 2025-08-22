@@ -18,19 +18,23 @@ import {
   Hospital
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import axiosClient from '@/lib/axios';
 
 export default function LandingScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   const router = useRouter();
-
   const [isOCRRegister, setIsOCRRegister] = useState<boolean>(false);
-
-  const isRegistered = () => {
-    
+  const isRegistered = async () => {
     try {
-      setIsOCRRegister(false);
+      const response = await axiosClient.get('/users/me')
+      if (response.data && response.data.isRegistered) {
+        setIsOCRRegister(true);
+      } else {
+        setIsOCRRegister(false);
+      }
     } catch (e) {
+      setIsOCRRegister(false)
       console.log('Error page Landing' + e);
     }
   }

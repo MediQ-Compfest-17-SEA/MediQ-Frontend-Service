@@ -1,3 +1,4 @@
+import io from "socket.io-client";
 
 class WebSocketService {
   private static instance: WebSocketService | null = null;
@@ -20,7 +21,7 @@ class WebSocketService {
   connect() {
     if (this.socketRef) return;
 
-    this.socketRef = io(process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:3000");
+    this.socketRef = io(process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:8082");
 
     this.socketRef.on("connect", () => {
       console.log("WebSocket connected");

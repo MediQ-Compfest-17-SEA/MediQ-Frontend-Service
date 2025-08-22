@@ -69,7 +69,7 @@ export default function WaitingListScreen() {
       setQueueData(response.data);
       return response.data;
     } catch (e) {
-      console.error("Error fetching queue data:", e);
+      console.error("Error Queue fetching queue data:", e);
 
       setLoading(false);
     }

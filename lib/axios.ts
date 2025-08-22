@@ -1,23 +1,17 @@
 import axios from "axios";
-import * as SecureStore from "expo-secure-store";
-
-async function getToken() {
-  return await SecureStore.getItemAsync("token");
-}
+import { storage } from "@/utils/storage";
 
 const axiosClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_BASE_URL,
   headers: {
     "Content-Type": "application/json",
+    "x-api-key": "my-very-strong-api-key"
   },
 });
 
 axiosClient.interceptors.request.use(
   async (config) => {
-    let token = await getToken();
-    if (!token) {
-      token = localStorage.getItem("token") || "";
-    }
+    let token = await storage.getItem("token");
     console.log("Current token:", token);
     if (config.headers) {
       config.headers.Authorization = token ? `Bearer ${token}` : "";

@@ -9,7 +9,7 @@ import {
   Monitor
 } from 'lucide-react-native';
 import { QueueItem } from '@/Interfaces/IQueue';
-import useWebSocket from '@/hooks/useWebSocket';
+import socket from '@/lib/socket';
 
 
 export default function Leaderboard() {

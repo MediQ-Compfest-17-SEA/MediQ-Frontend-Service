@@ -115,13 +115,14 @@ export default function ScanScreen() {
 
       const response = await axios.post(process.env.EXPO_PUBLIC_BASE_URL + "/ocr/upload", formData, {
         headers: {
-          'Content-Type': 'application/json',
-          'X-API-KEY': `my-very-strong-api-key`
+          "Content-Type": "multipart/form-data",
+          "x-api-key": "my-very-strong-api-key"
         }
       });
       console.log("OCR result:", response.data);
 
       // Reset states
+
       setCapturedImage(null);
       setShowPreview(false);
 
@@ -135,7 +136,7 @@ export default function ScanScreen() {
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         alert(error.response?.data?.error || "Failed to fetch Camera");
-        console.error("Fetch error:", error.response?.data || error.message);
+        console.log("Fetch error:", error.response?.data || error.message);
       }
     } finally {
       setIsProcessing(false);

@@ -27,11 +27,11 @@ export default function LandingScreen() {
   const [isOCRRegister, setIsOCRRegister] = useState<boolean>(false);
 
   const isRegistered = () => {
-    //api call userID
+    
     try {
       setIsOCRRegister(false);
     } catch (e) {
-      console.log(e);
+      console.log('Error page Landing' + e);
     }
   }
   useEffect(() => {

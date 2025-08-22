@@ -1,4 +1,4 @@
-import { SOCKET_API_URL } from "@env";
+
 import { io, Socket } from "socket.io-client";
 
 class WebSocketService {
@@ -22,7 +22,7 @@ class WebSocketService {
   connect() {
     if (this.socketRef) return;
 
-    this.socketRef = io(SOCKET_API_URL || "http://localhost:3000");
+    this.socketRef = io(process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:3000");
 
     this.socketRef.on("connect", () => {
       console.log("WebSocket connected");

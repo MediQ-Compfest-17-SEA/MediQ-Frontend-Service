@@ -28,11 +28,11 @@ export default function WaitingListScreen() {
   const [slideAnim] = useState(new Animated.Value(30));
   const [pulseAnim] = useState(new Animated.Value(1));
   const [refreshRotation] = useState(new Animated.Value(0));
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { userId, institutionId } = useLocalSearchParams<{ userId: string, institutionId: string }>();
   const [queueData, setQueueData] = useAtom(userQueueAtom);
   const [loading, setLoading] = useAtom(loadingAtom)
 
-  const currentUser = queueData.find((item) => item.id === id)
+  const currentUser = queueData.find((item) => item.id === userId)
   const waitingUsers = queueData.filter((user: QueueItem) => user.status === 'waiting');
   const currentUserIndex = waitingUsers.findIndex(user => user.id === currentUser?.id);
   const remainingQueue = currentUserIndex >= 0 ? currentUserIndex : 0;

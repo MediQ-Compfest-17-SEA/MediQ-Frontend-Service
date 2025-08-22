@@ -1,6 +1,6 @@
 import { atomWithStorage } from 'jotai/utils';
 import {atom} from 'jotai';
-import { SelectedUser } from '@/Interfaces/IUser';
+import { OcrData, SelectedUser } from '@/Interfaces/IUser';
 import { QueueItem } from '@/Interfaces/IQueue';
 
 
@@ -19,3 +19,5 @@ export const deleteIndexAtom = atom<number | null>(null);
 
 export const showActionDialogAtom = atom(false);
 export const actionIndexAtom = atom<number | null>(null);
+
+export const ocrDataAtom = atomWithStorage<OcrData | null>('ocrData', null);

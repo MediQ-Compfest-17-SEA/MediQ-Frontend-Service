@@ -18,7 +18,9 @@ import {
   Stethoscope,
   CheckCircle,
   MapPin,
-  CreditCard
+  CreditCard,
+  Building2,
+  StickyNote
 } from 'lucide-react-native';
 
 import { Form } from '@/components/form/Form';
@@ -28,7 +30,10 @@ import { VStack } from '@/components/ui/vstack';
 import { FormMessage } from '@/components/form/FormMessage';
 import { useRouter } from 'expo-router';
 import { OcrData } from '@/Interfaces/IUser';
-
+import { useSearchParams } from 'expo-router/build/hooks';
+import { useAtom } from 'jotai';
+import { loadingAtom, ocrDataAtom } from '@/utils/store';
+import axiosClient from '@/lib/axios';
 const confirmationSchema = z.object({
   nik: z.string().length(16, 'NIK harus 16 digit'),
   nama: z.string().min(2, 'Nama minimal 2 karakter'),
@@ -62,159 +67,86 @@ const confirmationSchema = z.object({
 });
 
 export default function ConfirmationScreen() {
+  const tempId = useSearchParams().get('tempId');
+  const router = useRouter();
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(30));
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ocrData, setOcrData] = useAtom(ocrDataAtom);
+  const [loading, setLoading] = useAtom(loadingAtom);
 
-  const ocrData = {
-    nik: "1234567890123456",
-    nama: "RIJAL MUHYIDIN",
-    tempat_lahir: "PALEMBANG",
-    tgl_lahir: "10-10-1999",
-    jenis_kelamin: "LAKI-LAKI",
-    agama: "ISLAM",
-    status_perkawinan: "BELUM KAWIN",
-    pekerjaan: "PELAJAR/MAHASISWA",
-    kewarganegaraan: "WNI",
-    alamat: {
-      name: "DUSUN 1 OGAN 5",
-      rt_rw: "001/002",
-      kel_desa: "SUNGAI ARE",
-      kecamatan: "ALANG-ALANG LEBAR",
-      kabupaten: "OGAN ILIR",
-      provinsi: "SUMATERA SELATAN"
-    },
-    notes: "Rijal Sakit Mah",
-    institution: {
-      id: "inst-001",
-      name: "RSUD Palembang",
-      code: "RSUD-001",
-      address: "Jl. Raya No. 1, Palembang",
-      phone: "0711-123456",
-      email: "info@rsudpalembang.com",
-      type: "poli gigi"
-    }
-  };
-
-  const methods = useForm({
+  const methods = useForm<OcrData>({
     resolver: zodResolver(confirmationSchema),
-    defaultValues: {
-      nik: ocrData.nik,
-      nama: ocrData.nama,
-      tempat_lahir: ocrData.tempat_lahir,
-      tgl_lahir: ocrData.tgl_lahir,
-      jenis_kelamin: ocrData.jenis_kelamin,
-      agama: ocrData.agama,
-      status_perkawinan: ocrData.status_perkawinan,
-      pekerjaan: ocrData.pekerjaan,
-      kewarganegaraan: ocrData.kewarganegaraan,
-      alamat: {
-        name: ocrData.alamat.name,
-        rt_rw: ocrData.alamat.rt_rw,
-        kel_desa: ocrData.alamat.kel_desa,
-        kecamatan: ocrData.alamat.kecamatan,
-        kabupaten: ocrData.alamat.kabupaten,
-        provinsi: ocrData.alamat.provinsi,
-      },
-      email: '',
-      password: '',
-      notes: '',
-      institution: {
-        id: ocrData.institution.id,
-        name: ocrData.institution.name,
-        code: ocrData.institution.code,
-        address: ocrData.institution.address,
-        phone: ocrData.institution.phone,
-        email: ocrData.institution.email,
-      },
-    },
+    defaultValues: {}, // kosong dulu, nanti reset setelah fetch
   });
 
-  const { handleSubmit } = methods;
+  const { handleSubmit, reset } = methods;
 
+  // Fetch OCR data
+  useEffect(() => {
+    if (!tempId) return;
+    setLoading(true);
+
+    const fetchData = async () => {
+      try {
+        const response = await axiosClient.get(`/ocr/temp/${tempId}`);
+        setOcrData(response.data);
+
+        // reset form values
+        reset({
+          ...response.data,
+          email: response.data.email || '',
+          password: '',
+          notes: response.data.notes || '',
+          institution: {
+            ...response.data.institution,
+            email: response.data.institution.email || '',
+          }
+        });
+      } catch (err) {
+        Alert.alert('Error', 'Gagal mengambil data OCR');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [tempId]);
+
+  // Animasi masuk
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, []);
 
   const onSubmit = async (data: OcrData) => {
-    setIsSubmitting(true);
+    setLoading(true);
     try {
-      // Restructure data untuk API
-      const payload = {
-        nik: data.nik,
-        nama: data.nama,
-        tempat_lahir: data.tempat_lahir,
-        tgl_lahir: data.tgl_lahir,
-        jenis_kelamin: data.jenis_kelamin,
-        agama: data.agama,
-        status_perkawinan: data.status_perkawinan,
-        pekerjaan: data.pekerjaan,
-        kewarganegaraan: data.kewarganegaraan,
-        alamat: {
-          name: data.alamat.name,
-          rt_rw: data.alamat.rt_rw,
-          kel_desa: data.alamat.kel_desa,
-          kecamatan: data.alamat.kecamatan,
-          kabupaten: data.alamat.kabupaten,
-          provinsi: data.alamat.provinsi,
-        },
-        email: data.email,
-        password: data.password,
-        notes: data.notes,
-        institution: {
-          id: data.institution.id,
-          name: data.institution.name,
-          code: data.institution.code,
-          address: data.institution.address,
-          phone: data.institution.phone,
-          email: data.institution.email,
-        }
-      };
+      const response = await axiosClient.patch(`/ocr/temp/${tempId}`, data);
+      const userId = response.data.id || tempId;
+      Alert.alert('Sukses', 'Data pasien berhasil disimpan!');
+      const institutionId = data.institution.id;
+      router.push(`/(mobile)/(home)/waiting-list/${institutionId}/${userId}`);
 
-      // Hit API untuk submit form
-      try{
-
-      } catch (error) {
-
-      }
-
-      console.log('Submitting payload:', payload);
-      router.push('/(mobile)/(home)/waiting-list/:id')
-
-    } catch (error) {
-      setIsSubmitting(false);
-      Alert.alert('Error', 'Gagal menyimpan data. Silakan coba lagi.');
-      console.error('Submission error:', error);
+    } catch (err) {
+      Alert.alert('Error', 'Gagal menyimpan data.');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
-  const router = useRouter();
-  const goBack = () => {
-    router.back();
-  };
 
-  // Nanti jenis layanan akan diambil dari API berdasarkan institusi
-  const jenisLayananOptions = [
-    { value: 'poli-umum', label: 'Poli Umum' },
-    { value: 'poli-gigi', label: 'Poli Gigi' },
-    { value: 'poli-anak', label: 'Poli Anak' },
-    { value: 'poli-mata', label: 'Poli Mata' },
-    { value: 'apotek', label: 'Apotek' },
-  ];
-  const jenisinstitusiOptions = [
-    { }
-  ]
+  const goBack = () => router.back();
 
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
   return (
     <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
@@ -616,53 +548,161 @@ export default function ConfirmationScreen() {
               </VStack>
             </View>
 
-            {/* Pilih Layanan */}
+            {/* Data Institusi */}
             <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
               <View className="flex-row items-center mb-4">
-                <Stethoscope size={20} color="#EF4444" />
+                <Building2 size={20} color="#F59E0B" />
                 <Text className="text-gray-800 font-bold text-lg ml-2">
-                  Pilih Layanan
+                  Data Institusi
                 </Text>
-                <View className="ml-auto bg-red-100 px-2 py-1 rounded-md">
-                  <Text className="text-red-600 text-xs font-medium">
-                    Pilih satu
+                <View className="ml-auto bg-yellow-100 px-2 py-1 rounded-md">
+                  <Text className="text-yellow-600 text-xs font-medium">
+                    Wajib diisi
                   </Text>
                 </View>
               </View>
 
-              <FormField
-                name="jenisLayanan"
-                render={({ value, onChange }) => (
-                  <VStack space="sm">
-                    {jenisLayananOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        onPress={() => onChange(option.value)}
-                        className={`p-4 rounded-xl border-2 ${value === option.value
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 bg-gray-50'
-                          }`}
-                      >
-                        <View className="flex-row items-center">
-                          <View className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${value === option.value
-                            ? 'border-blue-500 bg-blue-500'
-                            : 'border-gray-300'
-                            }`}>
-                            {value === option.value && (
-                              <View className="w-2 h-2 bg-white rounded-full" />
-                            )}
-                          </View>
-                          <Text className={`font-medium ${value === option.value ? 'text-blue-700' : 'text-gray-700'
-                            }`}>
-                            {option.label}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </VStack>
-                )}
-              />
-              <FormMessage name="jenisLayanan" />
+              <VStack space="md">
+                <View>
+                  <FormLabel>Nama Institusi</FormLabel>
+                  <FormField
+                    name="institusi.name"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Nama institusi"
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800"
+                      />
+                    )}
+                  />
+                  <FormMessage name="institusi.name" />
+                </View>
+
+                <View>
+                  <FormLabel>Kode Institusi</FormLabel>
+                  <FormField
+                    name="institusi.code"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Kode institusi"
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800"
+                      />
+                    )}
+                  />
+                  <FormMessage name="institusi.code" />
+                </View>
+
+                <View>
+                  <FormLabel>Alamat Institusi</FormLabel>
+                  <FormField
+                    name="institusi.address"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Alamat institusi"
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800"
+                      />
+                    )}
+                  />
+                  <FormMessage name="institusi.address" />
+                </View>
+
+                <View>
+                  <FormLabel>Tipe Institusi</FormLabel>
+                  <FormField
+                    name="institusi.type"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Tipe (misal: poli klinik, poli gigi)"
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800"
+                      />
+                    )}
+                  />
+                  <FormMessage name="institusi.type" />
+                </View>
+
+                <View>
+                  <FormLabel>Telepon Institusi</FormLabel>
+                  <FormField
+                    name="institusi.phone"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="No telepon"
+                        keyboardType="phone-pad"
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800"
+                      />
+                    )}
+                  />
+                  <FormMessage name="institusi.phone" />
+                </View>
+
+                <View>
+                  <FormLabel>Email Institusi</FormLabel>
+                  <FormField
+                    name="institusi.email"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Email institusi"
+                        keyboardType="email-address"
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800"
+                      />
+                    )}
+                  />
+                  <FormMessage name="institusi.email" />
+                </View>
+              </VStack>
+            </View>
+
+            {/* Field Notes */}
+            <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
+              <View className="flex-row items-center mb-4">
+                <StickyNote size={20} color="#6366F1" />
+                <Text className="text-gray-800 font-bold text-lg ml-2">
+                  Catatan
+                </Text>
+                <View className="ml-auto bg-indigo-100 px-2 py-1 rounded-md">
+                  <Text className="text-indigo-600 text-xs font-medium">
+                    Opsional
+                  </Text>
+                </View>
+              </View>
+
+              <VStack space="md">
+                <View>
+                  <FormLabel>Notes</FormLabel>
+                  <FormField
+                    name="notes"
+                    render={({ value, onChange, onBlur }) => (
+                      <TextInput
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Tulis catatan tambahan..."
+                        multiline
+                        numberOfLines={4}
+                        className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 h-24 text-start"
+                      />
+                    )}
+                  />
+                  <FormMessage name="notes" />
+                </View>
+              </VStack>
             </View>
           </Form>
         </Animated.View>
@@ -672,12 +712,12 @@ export default function ConfirmationScreen() {
       <View className="bg-white px-6 py-4 shadow-lg">
         <TouchableOpacity
           onPress={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
-          className={`rounded-full py-4 px-6 ${isSubmitting ? 'bg-gray-400' : 'bg-blue-500'
+          disabled={loading}
+          className={`rounded-full py-4 px-6 ${loading ? 'bg-gray-400' : 'bg-blue-500'
             }`}
         >
           <View className="flex-row items-center justify-center">
-            {isSubmitting ? (
+            {loading ? (
               <>
                 <View className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />
                 <Text className="text-white font-bold text-base">

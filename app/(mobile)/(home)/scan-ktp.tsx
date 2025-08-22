@@ -120,9 +120,10 @@ export default function ScanScreen() {
       setCapturedImage(null);
       setShowPreview(false);
 
+      const tempId = response.data.tempId
       // Small delay before navigation to ensure state is updated
       setTimeout(() => {
-        router.push('/(mobile)/(home)/confirmation');
+        router.push(`/(mobile)/(home)/confirmation/${tempId}`);
       }, 100);
 
       return response.data;

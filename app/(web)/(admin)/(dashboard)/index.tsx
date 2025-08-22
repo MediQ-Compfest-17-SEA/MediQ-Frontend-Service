@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/text';
 import axiosClient from '@/lib/axios';
-import { loadingAtom, queueDataAtom, statusQueueAtom, userDataAtom } from '@/utils/store';
+import { loadingAtom, statusQueueAtom, userDataAtom } from '@/utils/store';
 import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
 import { ChartBar, MessageCircleX, PersonStanding, Settings } from 'lucide-react-native';

@@ -124,10 +124,10 @@ class WebSocketService {
   }
 
   // Method to subscribe to notifications
-  subscribeToNotifications(userId: string, institutionId: string, types: string[] = ['queue_ready', 'queue_almost_ready', 'queue_update']) {
+  subscribeToNotifications(userId: string, institutionId: string, types: string[] = ['queue_ready', 'queue_almost_ready']) {
     this.emit('subscribe_notifications', {
       userId,
-      institutionId,
+      // institutionId,
       types
     });
   }
@@ -136,7 +136,7 @@ class WebSocketService {
   unsubscribeFromNotifications(userId: string, institutionId: string) {
     this.emit('unsubscribe_notifications', {
       userId,
-      institutionId
+      // institutionId
     });
   }
 }

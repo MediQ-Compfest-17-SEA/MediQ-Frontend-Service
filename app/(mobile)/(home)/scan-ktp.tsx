@@ -22,7 +22,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
+import axiosClient from '@/lib/axios';
 
 
 const { width, height } = Dimensions.get('window');
@@ -113,12 +113,8 @@ export default function ScanScreen() {
         type: `image/${fileType}`,
       } as any);
 
-      const response = await axios.post(process.env.EXPO_PUBLIC_BASE_URL + "/ocr/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          "x-api-key": "my-very-strong-api-key"
-        }
-      });
+      // Let axios/browser set multipart boundary automatically; axiosClient adds X-API-KEY
+      const response = await axiosClient.post('/ocr/upload', formData);
       console.log("OCR result:", response.data);
 
       // Reset states
@@ -133,11 +129,14 @@ export default function ScanScreen() {
       }, 100);
 
       return response.data;
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        alert(error.response?.data?.error || "Failed to fetch Camera");
-        console.log("Fetch error:", error.response?.data || error.message);
-      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to upload image";
+      alert(msg);
+      console.log("Upload error:", err?.response?.data || err?.message || err);
     } finally {
       setIsProcessing(false);
     }

@@ -14,8 +14,10 @@ import { FormField } from "@/components/form/FormField";
 import { FormLabel } from "@/components/form/FormLabel";
 import { FormMessage } from "@/components/form/FormMessage";
 import { UserFormData } from '@/Interfaces/IUser';
-import axios from 'axios';
-import axiosClient from '@/lib/axios';
+import axiosClient, { setAuthToken } from '@/lib/axios';
+import socket from '@/lib/socket';
+import { storage, clearAuth } from '@/utils/storage';
+import { useRouter } from 'expo-router';
 
 // Validation schema for user form
 const userValidationSchema = z.object({
@@ -40,6 +42,7 @@ const userValidationSchema = z.object({
 
 
 export default function UsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useAtom(userDataAtom)
   const [showModal, setShowModal] = useAtom(showModalAtom);
   const [selectedUser, setSelectedUser] = useAtom(selectedAtom);
@@ -134,7 +137,7 @@ export default function UsersPage() {
         kewarganegaraan: userData.kewarganegaraan
       };
 
-      const response = await axios.post(`/users`, payload)
+      const response = await axiosClient.post(`/users`, payload)
       if (response.data && response.data.success) {
         Alert.alert('Success', 'User created successfully');
         await fetchUsers(); // Refresh the user list
@@ -173,7 +176,7 @@ export default function UsersPage() {
         kewarganegaraan: userData.kewarganegaraan
       };
 
-      const response = await axios.put(`/users/${userId}`, payload);
+      const response = await axiosClient.put(`/users/${userId}`, payload);
 
       if (response.data && response.data.success) {
         Alert.alert('Success', 'User updated successfully');
@@ -194,7 +197,7 @@ export default function UsersPage() {
   const deleteUser = async (userId: string) => {
     setLoading(true);
     try {
-      const response = await axios.delete(`/users/${userId}`);
+      const response = await axiosClient.delete(`/users/${userId}`);
       if (response.data && response.data.success) {
         Alert.alert('Success', 'User deleted successfully');
         await fetchUsers();
@@ -212,7 +215,19 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    (async () => {
+      const token = await storage.getItem('token');
+      if (!token) {
+        router.replace('/(web)/(admin)/login');
+        return;
+      }
+      setAuthToken(token);
+      try {
+        socket.setToken(token);
+        socket.connect();
+      } catch {}
+      await fetchUsers();
+    })();
   }, []);
 
   const handleAddUser = () => {
@@ -308,6 +323,15 @@ export default function UsersPage() {
       setShowModal(false);
       reset();
     }
+  };
+
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await clearAuth();
+    } catch {}
+    setAuthToken(null);
+    try { socket.disconnect(); } catch {}
+    router.replace('/(web)/(admin)/login');
   };
 
   const UserModal = () => (
@@ -664,13 +688,21 @@ export default function UsersPage() {
             <Text className="text-2xl font-bold text-gray-800">Users Management</Text>
             <Text className="text-gray-600">Manage registered users</Text>
           </View>
-          <Pressable
-            className="bg-blue-500 px-4 py-2 rounded-lg flex-row items-center"
-            onPress={handleAddUser}
-          >
-            <PlusCircle size={20} color="white" />
-            <Text className="text-white font-medium ml-1">Add User</Text>
-          </Pressable>
+          <View className="flex-row items-center">
+            <Pressable
+              className="bg-blue-500 px-4 py-2 rounded-lg flex-row items-center mr-2"
+              onPress={handleAddUser}
+            >
+              <PlusCircle size={20} color="white" />
+              <Text className="text-white font-medium ml-1">Add User</Text>
+            </Pressable>
+            <Pressable
+              className="bg-red-500 px-4 py-2 rounded-lg items-center"
+              onPress={handleLogout}
+            >
+              <Text className="text-white font-medium">Logout</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 

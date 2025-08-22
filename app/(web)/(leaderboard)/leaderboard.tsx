@@ -11,7 +11,9 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
-import axios from '../../../lib/axios';
+import axios, { setAuthToken } from '../../../lib/axios';
+import socket from '@/lib/socket';
+import { storage } from '@/utils/storage';
 
 export default function Leaderboard() {
   const [queueData, setQueueData] = useState<QueueItem[]>([]);
@@ -23,10 +25,15 @@ export default function Leaderboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [institutionId, setInstitutionId] = useState<string | null>(null);
   const router = useRouter();
   const isMountedRef = useRef(true);
 
-  const normalizeStatus = (status: string) => status.toLowerCase();
+  const normalizeStatus = (status: string) => {
+    const s = (status || '').toLowerCase().replace(/-/g, '_').trim();
+    if (s === 'onprocess' || s === 'inprocess') return 'in_progress';
+    return s;
+  };
 
   const fetchLeaderboardData = useCallback(async () => {
     if (!isRefreshing) {
@@ -35,42 +42,38 @@ export default function Leaderboard() {
     setError(null);
 
     try {
-      const response = await axios.get('/queue');
+      // For public display, prefer WebSocket. Only try HTTP if we have a token.
+      const token = await storage.getItem('token');
+      if (!token) {
+        setIsConnected(socket.isConnected);
+        return; // rely on WebSocket snapshot
+      }
+      setAuthToken(token);
+      const response = await axios.get('/queue', {
+        params: institutionId ? { institutionId } : undefined,
+      });
 
-      if (Array.isArray(response.data)) {
-        const allQueues: QueueItem[] = response.data;
+      const payload = (Array.isArray(response?.data?.data) ? response.data.data
+        : Array.isArray(response?.data) ? response.data
+        : []) as QueueItem[];
 
-        const currentlyServing = allQueues.find(
-          (q) => {
-            const s = normalizeStatus(q.status);
-            return s === 'current' || s === 'in_progress' || s === 'onprocess';
-          }
-        );
+      const currentlyServing = payload.find((q) => {
+        const s = normalizeStatus(q.status as any);
+        return s === 'current' || s === 'in_progress';
+      });
 
-        const waitingList = allQueues.filter(
-          (q) => q.id !== currentlyServing?.id
-        );
+      const waitingList = payload.filter((q) => q.id !== currentlyServing?.id);
 
-        if (isMountedRef.current) {
-          setCurrentQueue(currentlyServing || null);
-          setQueueData(waitingList);
-          setIsConnected(true);
-        }
-
-      } else {
-        console.warn("API response is not an array:", response.data);
-        if (isMountedRef.current) {
-          setQueueData([]);
-          setCurrentQueue(null);
-        }
+      if (isMountedRef.current) {
+        setCurrentQueue(currentlyServing || null);
+        setQueueData(waitingList);
+        setIsConnected(true);
       }
     } catch (err: any) {
       if (isMountedRef.current) {
-        setIsConnected(false);
-        if (err.response && err.response.status === 401) {
-          setError("Sesi Anda telah berakhir. Silakan login kembali.");
-          router.replace('/(web)/(admin)/login');
-        } else {
+        setIsConnected(socket.isConnected);
+        // Do not redirect on 401; this page can run unauthenticated via WebSocket
+        if (err?.response?.status !== 401) {
           console.error("Failed to fetch leaderboard:", err);
           setError("Tidak dapat mengambil data dari server.");
         }
@@ -81,7 +84,7 @@ export default function Leaderboard() {
         setIsRefreshing(false);
       }
     }
-  }, [isRefreshing, router]);
+  }, [isRefreshing, institutionId]);
 
   // Memoized sorted queue data
   const sortedQueueData = useMemo(() => {
@@ -94,9 +97,36 @@ export default function Leaderboard() {
     });
   }, [queueData]);
 
-  // Initial load
+  // Initial load: resolve institution, connect socket, subscribe and fetch snapshot via WS (and HTTP if token exists)
   useEffect(() => {
-    fetchLeaderboardData();
+    (async () => {
+      try {
+        const token = await storage.getItem('token');
+        if (token) setAuthToken(token);
+      } catch {}
+      try {
+        // Resolve institution list (open endpoint with HTTP fallback in gateway)
+        const instResp = await axios.get('/institutions');
+        const list = instResp?.data?.data ?? instResp?.data ?? [];
+        const firstId = list?.[0]?.id || list?.[0]?.code || 'default-inst';
+        setInstitutionId(firstId);
+      } catch {
+        setInstitutionId('default-inst');
+      }
+
+      // Connect socket and subscribe
+      socket.connect();
+      setIsConnected(socket.isConnected);
+      const effectiveInst = institutionId || 'default-inst';
+      socket.subscribeQueueUpdates(effectiveInst);
+
+      // Request current snapshot via WebSocket if server supports it
+      try {
+        socket.emit('get_queue_status', { institutionId: effectiveInst });
+      } catch {}
+
+      fetchLeaderboardData();
+    })();
     
     // Cleanup function
     return () => {
@@ -104,7 +134,7 @@ export default function Leaderboard() {
     };
   }, []);
 
-  // Auto refresh every 30 seconds
+  // Auto refresh every 30 seconds (HTTP fallback); realtime handled by WebSocket
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       if (isMountedRef.current && !isLoading) {
@@ -160,12 +190,16 @@ export default function Leaderboard() {
     switch (normalizeStatus(status)) {
       case 'current':
       case 'in_progress':
-      case 'onprocess':
         return 'bg-blue-500';
       case 'waiting':
         return 'bg-yellow-500';
       case 'completed':
         return 'bg-green-500';
+      case 'called':
+        return 'bg-purple-500';
+      case 'cancelled':
+      case 'missed':
+        return 'bg-gray-500';
       default:
         return 'bg-gray-400';
     }
@@ -175,7 +209,6 @@ export default function Leaderboard() {
     switch (normalizeStatus(status)) {
       case 'current':
       case 'in_progress':
-      case 'onprocess':
         return <Activity size={24} color="white" />;
       case 'waiting':
         return <Clock size={24} color="white" />;
@@ -188,7 +221,7 @@ export default function Leaderboard() {
 
   const isCurrentlyBeingServed = (status: string) => {
     const s = normalizeStatus(status);
-    return s === 'current' || s === 'in_progress' || s === 'onprocess';
+    return s === 'current' || s === 'in_progress';
   };
 
   const handleRetry = () => {
@@ -196,6 +229,47 @@ export default function Leaderboard() {
     setIsRefreshing(true);
     fetchLeaderboardData();
   };
+
+  // WebSocket handlers
+  useEffect(() => {
+    const onQueueUpdate = (data: any) => {
+      if (!isMountedRef.current) return;
+      let payload: QueueItem[] = [];
+      if (Array.isArray(data)) payload = data;
+      else if (Array.isArray(data?.queue)) payload = data.queue;
+      else if (Array.isArray(data?.queueData)) payload = data.queueData;
+
+      if (!payload.length) return;
+
+      const currentlyServing = payload.find((q: any) => {
+        const s = normalizeStatus(q.status);
+        return s === 'current' || s === 'in_progress';
+      });
+      const waitingList = payload.filter((q: any) => q.id !== currentlyServing?.id);
+
+      setCurrentQueue((currentlyServing as any) || null);
+      setQueueData(waitingList as any);
+      setIsConnected(true);
+      setIsLoading(false);
+      setIsRefreshing(false);
+    };
+
+    const onReady = () => fetchLeaderboardData();
+    const onAlmostReady = () => fetchLeaderboardData();
+    const onCalled = () => fetchLeaderboardData();
+
+    socket.addCallbacks('queue_update', onQueueUpdate);
+    socket.addCallbacks('queue_ready', onReady);
+    socket.addCallbacks('queue_almost_ready', onAlmostReady);
+    socket.addCallbacks('queue_called', onCalled);
+
+    return () => {
+      socket.removeCallbacks('queue_update', onQueueUpdate);
+      socket.removeCallbacks('queue_ready', onReady);
+      socket.removeCallbacks('queue_almost_ready', onAlmostReady);
+      socket.removeCallbacks('queue_called', onCalled);
+    };
+  }, [fetchLeaderboardData]);
 
   return (
     <View className="flex-1 bg-gray-50">

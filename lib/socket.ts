@@ -7,6 +7,7 @@ class WebSocketService {
   private maxReconnectAttempts = 5;
   private callbacks: Record<string, Function[]> = {};
   private token: string | null = null;
+  private lastSubscribedInstitutionId: string | null = null;
 
   public isConnected = false;
 
@@ -21,23 +22,41 @@ class WebSocketService {
 
   setToken(token: string) {
     this.token = token;
+    if (this.socketRef) {
+      // Update auth for subsequent emits/acks
+      // @ts-ignore
+      (this.socketRef as any).auth = { token };
+      try {
+        this.socketRef.emit('auth_update', { token });
+      } catch {}
+    }
   }
 
   connect() {
     if (this.socketRef) return;
 
-    const socketUrl = process.env.EXPO_PUBLIC_SOCKET_URL || "https://mediq-api-gateway.craftthingy.com/api/socket";
-    
+    // Resolve socket namespace under same origin to avoid CORS:
+    // Backend namespace (NestJS) is "/api/websocket"
+    const socketUrl =
+      (process.env.EXPO_PUBLIC_SOCKET_URL && process.env.EXPO_PUBLIC_SOCKET_URL.trim()) ||
+      (typeof window !== 'undefined' ? `${window.location.origin}/api/websocket` : '/api/websocket');
+
     // Initialize socket with auth token if available
     const socketOptions: any = {
       transports: ['websocket'],
       upgrade: true,
+      // Explicit path for Socket.IO engine (default is /socket.io)
+      path: '/socket.io',
+      withCredentials: true,
     };
 
+    // Fallback: hydrate token from web storage if not explicitly provided
+    const webToken = (typeof window !== 'undefined' ? window.localStorage.getItem('token') : null);
+    if (!this.token && webToken) {
+      this.token = webToken;
+    }
     if (this.token) {
-      socketOptions.auth = {
-        token: this.token
-      };
+      socketOptions.auth = { token: this.token };
     }
 
     this.socketRef = io(socketUrl, socketOptions);
@@ -47,6 +66,18 @@ class WebSocketService {
       this.isConnected = true;
       this.reconnectAttempts = 0;
       this.executeCallback("connect", null);
+
+      // Re-subscribe to queue updates on reconnect if needed
+      if (this.lastSubscribedInstitutionId) {
+        try {
+          this.socketRef?.emit('subscribe_queue_updates', {
+            institutionId: this.lastSubscribedInstitutionId,
+          });
+          console.log('Re-subscribed to queue updates for institution:', this.lastSubscribedInstitutionId);
+        } catch (e) {
+          console.warn('Failed to re-subscribe queue updates:', e);
+        }
+      }
     });
 
     this.socketRef.on("disconnect", () => {
@@ -73,13 +104,29 @@ class WebSocketService {
       console.log("Queue update received:", data);
       this.executeCallback("queue_update", data);
     });
-
+    // Also handle server's queue_updated event name
+    this.socketRef.on("queue_updated", (data: any) => {
+      console.log("Queue updated (server):", data);
+      this.executeCallback("queue_update", data);
+    });
+    // Snapshot via WebSocket
+    this.socketRef.on("queue_status", (data: any) => {
+      console.log("Queue status snapshot:", data);
+      this.executeCallback("queue_update", data);
+    });
+ 
     // Listen for queue ready notifications
     this.socketRef.on("queue_ready", (data: any) => {
       console.log("Queue ready notification:", data);
       this.executeCallback("queue_ready", data);
     });
-
+ 
+    // Also handle queue called notifications
+    this.socketRef.on("queue_called", (data: any) => {
+      console.log("Queue called notification:", data);
+      this.executeCallback("queue_called", data);
+    });
+ 
     // Listen for queue almost ready notifications
     this.socketRef.on("queue_almost_ready", (data: any) => {
       console.log("Queue almost ready notification:", data);
@@ -138,6 +185,13 @@ class WebSocketService {
       userId,
       // institutionId
     });
+  }
+
+  // Subscribe to queue updates by institution
+  subscribeQueueUpdates(institutionId: string) {
+    if (!institutionId) return;
+    this.lastSubscribedInstitutionId = institutionId;
+    this.emit('subscribe_queue_updates', { institutionId });
   }
 }
 

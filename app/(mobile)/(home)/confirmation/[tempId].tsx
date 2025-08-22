@@ -35,7 +35,8 @@ import { useAtom } from 'jotai';
 import { loadingAtom, ocrDataAtom } from '@/utils/store';
 import axiosClient from '@/lib/axios';
 import { buildFormDefaults } from '@/utils/formDefaults';
-import axios from 'axios';
+import { storage } from '@/utils/storage';
+import socket from '@/lib/socket';
 
 const confirmationSchema = z.object({
   nik: z.string().length(16, 'NIK harus 16 digit'),
@@ -165,19 +166,54 @@ export default function ConfirmationScreen() {
   const onSubmit = async (data: OcrData) => {
     setLoading(true);
     try {
-      console.log('Submitting data:', data); 
-      const response = await axios.post(process.env.EXPO_PUBLIC_BASE_URL + `/ocr/temp/${tempId}`, data, {
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "my-very-strong-api-key"
-        }
-      });
+      console.log('Submitting data:', data);
+      // Confirm temp and create user + enqueue in backend (body may accept institutionId only; include from form if available)
+      const body: any = {};
+      if ((data as any)?.institution?.id || (data as any)?.institution?.code) {
+        body.institutionId = (data as any).institution?.id || (data as any).institution?.code;
+      }
+      const response = await axiosClient.post(`/ocr/confirm-temp/${tempId}`, body);
+      const payload = response?.data?.data ?? response?.data ?? {};
       console.log('Response from server:', response.data);
-      const userId = tempId;
+
+      // Persist tokens if provided by backend (various shapes supported)
+      const tokens = payload.tokens || payload.data?.tokens || payload.tokensJson || null;
+      let accessToken: string | null = null;
+      let refreshToken: string | null = null;
+      if (tokens) {
+        try {
+          const t = typeof tokens === 'string' ? JSON.parse(tokens) : tokens;
+          accessToken = t?.accessToken || t?.access_token || null;
+          refreshToken = t?.refreshToken || t?.refresh_token || null;
+        } catch {
+          // ignore parse error
+        }
+      }
+      if (accessToken) {
+        await storage.setItem('token', accessToken);
+        // hydrate socket with token for authenticated channels
+        socket.setToken(accessToken);
+      }
+      if (refreshToken) {
+        await storage.setItem('refreshToken', refreshToken);
+      }
+
+      // Derive userId and institutionId for navigation, fallback to form/inferred
+      const userId =
+        payload.userId ||
+        payload.data?.userId ||
+        String(tempId || '');
+
+      const institutionId =
+        payload.institutionId ||
+        payload.data?.institutionId ||
+        (data as any)?.institution?.id ||
+        (data as any)?.institution?.code ||
+        'default-inst';
+
       Alert.alert('Sukses', 'Data pasien berhasil disimpan!');
-      const institutionId = data.institution.id;
       router.push(`/(mobile)/(home)/waiting-list/${institutionId}/${userId}`);
-      return response.data.data.result;
+      return payload;
     } catch (err) {
       Alert.alert('Error', 'Gagal menyimpan data.');
       console.log('Error Page Confirmation:', err);

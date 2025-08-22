@@ -2,6 +2,7 @@ import { atomWithStorage } from 'jotai/utils';
 import {atom} from 'jotai';
 import { OcrData, SelectedUser } from '@/Interfaces/IUser';
 import { QueueItem } from '@/Interfaces/IQueue';
+import { InstitutionProps } from '@/Interfaces/IInstitusi';
 
 
 
@@ -22,3 +23,7 @@ export const actionIndexAtom = atom<number | null>(null);
 
 export const ocrDataAtom = atomWithStorage<OcrData | null>('ocrData', null);
 export const statusQueueAtom = atomWithStorage<QueueItem[]>('queue', []);
+
+// Institutions integration for admin selection and subscription
+export const institutionsAtom = atomWithStorage<InstitutionProps[]>('institutions', []);
+export const selectedInstitutionIdAtom = atomWithStorage<string | null>('selectedInstitutionId', null);

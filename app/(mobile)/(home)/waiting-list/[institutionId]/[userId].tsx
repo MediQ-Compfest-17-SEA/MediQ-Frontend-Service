@@ -23,6 +23,7 @@ import { loadingAtom, userQueueAtom } from '@/utils/store';
 import { useLocalSearchParams } from 'expo-router';
 import { QueueItem } from '@/Interfaces/IQueue';
 import socket from '@/lib/socket';
+import { storage } from '@/utils/storage';
 
 export default function WaitingListScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -53,44 +54,62 @@ export default function WaitingListScreen() {
   }
 
   useEffect(() => {
-    //render list
+    // Render initial list
     queueList();
-    
-    // Initialize WebSocket connection
-    socket.connect();
-    
-    // Subscribe to queue updates
+
+    (async () => {
+      // Hydrate WebSocket auth token if available
+      try {
+        const token = await storage.getItem('token');
+        if (token) {
+          socket.setToken(token);
+        }
+      } catch {
+        // ignore
+      }
+
+      // Initialize WebSocket connection
+      socket.connect();
+
+      // Subscribe institution-specific queue updates
+      if (institutionId) {
+        socket.subscribeQueueUpdates(String(institutionId));
+      }
+
+      // Subscribe to user-specific notifications
+      if (userId) {
+        socket.subscribeToNotifications(String(userId), String(institutionId || ''));
+      }
+    })();
+
+    // Handlers
     const handleQueueUpdate = (data: any) => {
       console.log('Queue updated:', data);
-      if (data.institutionId === institutionId) {
+      if (!institutionId) return;
+      const targetInst = data?.institutionId || data?.data?.institutionId || null;
+      if (!targetInst || String(targetInst) === String(institutionId)) {
         setQueueData(data.queueData || data);
       }
     };
-    
+
     const handleQueueReady = (data: any) => {
       console.log('Queue ready for user:', data);
-      
-      if (data.userId === userId) {
-        // Refresh queue data when user's turn is ready
+      if (String(data?.userId || '') === String(userId || '')) {
         queueList();
       }
     };
-    
+
     const handleQueueAlmostReady = (data: any) => {
       console.log('Queue almost ready for user:', data);
-      if (data.userId === userId) {
-        // Show notification or update UI for almost ready
+      if (String(data?.userId || '') === String(userId || '')) {
         queueList();
       }
     };
-    
+
     // Add event listeners
     socket.addCallbacks('queue_update', handleQueueUpdate);
     socket.addCallbacks('queue_ready', handleQueueReady);
     socket.addCallbacks('queue_almost_ready', handleQueueAlmostReady);
-    
-    // Subscribe to notifications
-    socket.subscribeToNotifications(userId, institutionId);
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -118,7 +137,9 @@ export default function WaitingListScreen() {
       socket.removeCallbacks('queue_update', handleQueueUpdate);
       socket.removeCallbacks('queue_ready', handleQueueReady);
       socket.removeCallbacks('queue_almost_ready', handleQueueAlmostReady);
-      socket.unsubscribeFromNotifications(userId, institutionId);
+      if (userId || institutionId) {
+        socket.unsubscribeFromNotifications(String(userId || ''), String(institutionId || ''));
+      }
     };
   }, [fadeAnim, slideAnim, pulseAnim, userId, institutionId]);
 

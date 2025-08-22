@@ -1,10 +1,12 @@
 import { Text } from '@/components/ui/text';
-import axiosClient from '@/lib/axios';
+import axiosClient, { setAuthToken } from '@/lib/axios';
+import socket from '@/lib/socket';
+import { storage, clearAuth } from '@/utils/storage';
 import { loadingAtom, statusQueueAtom, userDataAtom } from '@/utils/store';
 import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
 import { ChartBar, MessageCircleX, PersonStanding, Settings } from 'lucide-react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 
 export default function Dashboard() {
@@ -12,9 +14,11 @@ export default function Dashboard() {
     const [users, setUsers] = useAtom(userDataAtom);
     const [queueData, setQueueData] = useAtom(statusQueueAtom);
     const [loading, setLoading] = useAtom(loadingAtom);
+    // Local-only stats to avoid mutating usersAtom shape used by Users table
+    const [usersTotal, setUsersTotal] = useState(0);
 
     // Calculate stats from data
-    const totalUsers = users?.length || 0;
+    const totalUsers = usersTotal || 0;
     const activeQueue = queueData?.filter(item => item.status === 'waiting').length || 0;
     const completedToday = queueData?.filter(item => item.status === 'completed').length || 0;
     const pendingQueue = queueData?.filter(item => item.status === 'onProcess').length || 0;
@@ -29,10 +33,14 @@ export default function Dashboard() {
     const fetchUsers = async () => {
         try {
             const response = await axiosClient.get('/users');
-            console.log('Users data:', response.data);
-            setUsers(response.data);
+            // Normalize payload; do not overwrite usersAtom shape here
+            const list = Array.isArray(response?.data?.data) ? response.data.data
+                        : Array.isArray(response?.data) ? response.data
+                        : [];
+            setUsersTotal(list.length);
         } catch (error) {
             console.error('Error fetching users:', error);
+            setUsersTotal(0);
         }
     };
 
@@ -61,8 +69,27 @@ export default function Dashboard() {
     };
 
     useEffect(() => {
-        fetchDashboardData();
+        (async () => {
+            const token = await storage.getItem('token');
+            if (!token) {
+                router.replace('/(web)/(admin)/login');
+                return;
+            }
+            setAuthToken(token);
+            socket.setToken(token);
+            socket.connect();
+            await fetchDashboardData();
+        })();
     }, []);
+
+    const handleLogout = async () => {
+        try {
+            await clearAuth();
+        } catch {}
+        setAuthToken(null);
+        try { socket.disconnect(); } catch {}
+        router.replace('/(web)/(admin)/login');
+    };
     
     return (
         <View className="flex-1 bg-gray-50">
@@ -70,8 +97,18 @@ export default function Dashboard() {
                 <View className="p-6">
                     {/* Header */}
                     <View className="mb-6">
-                        <Text className="text-3xl font-bold text-gray-800">Admin Dashboard</Text>
-                        <Text className="text-gray-600 mt-1">Welcome back! Here's what's happening today.</Text>
+                        <View className="flex-row items-center justify-between">
+                            <View>
+                                <Text className="text-3xl font-bold text-gray-800">Admin Dashboard</Text>
+                                <Text className="text-gray-600 mt-1">Welcome back! Here's what's happening today.</Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={handleLogout}
+                                className="bg-red-500 px-3 py-2 rounded-lg"
+                            >
+                                <Text className="text-white font-medium">Logout</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Stats Grid */}
@@ -156,13 +193,14 @@ export default function Dashboard() {
                                     {activeQueue} waiting
                                 </Text>
                             </TouchableOpacity>
+                            {/* Settings currently read-only; keep accessible if desired or disable */}
                             <TouchableOpacity
                                 onPress={() => router.push('/(web)/(admin)/(dashboard)/settings')}
                                 className="w-[48%] bg-purple-500 rounded-lg p-4">
                                 <Settings size={24} color="white" />
                                 <Text className="text-white font-medium mt-2">Settings</Text>
                                 <Text className="text-white text-xs mt-1 opacity-80">
-                                    System config
+                                    Profile (read-only)
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity

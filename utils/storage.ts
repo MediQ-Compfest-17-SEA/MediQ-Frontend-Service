@@ -25,3 +25,47 @@ export const storage = {
     }
   }
 };
+
+// Convenience helpers for auth-related storage
+
+export async function getToken() {
+  return await storage.getItem("token");
+}
+
+export async function setToken(token: string) {
+  await storage.setItem("token", token);
+}
+
+export async function getRefreshToken() {
+  return await storage.getItem("refreshToken");
+}
+
+export async function setRefreshToken(token: string) {
+  await storage.setItem("refreshToken", token);
+}
+
+export async function getId() {
+  return await storage.getItem("id");
+}
+
+export async function setId(id: string) {
+  await storage.setItem("id", id);
+}
+
+export async function clearAuth() {
+  await storage.removeItem("token");
+  await storage.removeItem("refreshToken");
+  await storage.removeItem("id");
+}
+
+export async function clearAll() {
+  try {
+    if (Platform.OS === "web") {
+      localStorage.clear();
+    } else {
+      await clearAuth();
+    }
+  } catch {
+    // no-op
+  }
+}

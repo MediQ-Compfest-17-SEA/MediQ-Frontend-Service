@@ -3,19 +3,25 @@ import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Table, Row, Rows } from 'react-native-table-component';
 import { ArrowBigDownDashIcon, PauseCircle, PlusCircle, RefreshCcw } from 'lucide-react-native';
-import { filterAtom, loadingAtom, queueDataAtom, statusQueueAtom } from '../../../../utils/store';
+import { filterAtom, loadingAtom, queueDataAtom, statusQueueAtom, institutionsAtom, selectedInstitutionIdAtom } from '../../../../utils/store';
 import { useAtom } from 'jotai';
 import { Spinner } from '@/components/ui/spinner';
 import socket from '@/lib/socket';
-import axiosClient from '@/lib/axios';
+import axiosClient, { setAuthToken } from '@/lib/axios';
+import { storage, clearAuth } from '@/utils/storage';
+import { useRouter } from 'expo-router';
 import { QueueItem } from '@/Interfaces/IQueue';
+import { InstitutionProps } from '@/Interfaces/IInstitusi';
 
 type FilterType = 'all' | 'waiting' | 'onProcess' | 'completed' | 'called' | 'missed';
 
 export default function QueueScreen() {
+  const router = useRouter();
   const [queueData, setQueueData] = useAtom<QueueItem[]>(statusQueueAtom);
   const [filter, setFilter] = useAtom(filterAtom);
   const [loading, setLoading] = useAtom(loadingAtom);
+  const [institutions, setInstitutions] = useAtom(institutionsAtom);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useAtom(selectedInstitutionIdAtom);
 
   const tableHead = ['Queue', 'Name', 'KTP', 'Status', 'Time', 'Type'];
   const widthArr = [60, 120, 140, 80, 70, 80];
@@ -23,9 +29,12 @@ export default function QueueScreen() {
   const fetchQueueData = async () => {
     setLoading(true);
     try {
-      const response = await axiosClient.get('/queue');
-      console.log('Queue data fetched:', response.data);
-      setQueueData(response.data);
+      const response = await axiosClient.get('/queue', {
+        params: selectedInstitutionId ? { institutionId: selectedInstitutionId } : undefined,
+      });
+      const payload = response?.data?.data ?? response?.data ?? [];
+      console.log('Queue data fetched:', payload);
+      setQueueData(payload);
     } catch (error) {
       console.error('Error fetching queue data:', error);
     } finally {
@@ -47,29 +56,49 @@ export default function QueueScreen() {
 
   const handleUpdateStatus = async (id: string, status: QueueItem['status']) => {
     try {
-      await axiosClient.patch(`/queue/${id}/status`, { status });
-      fetchQueueData(); 
+      // Normalize UI status to backend accepted values
+      const backendStatus =
+        status === 'onProcess' ? 'in-progress' : status;
+      await axiosClient.patch(`/queue/${id}/status`, { status: backendStatus });
+      fetchQueueData();
     } catch (error) {
       console.error('Error updating status:', error);
     }
   };
 
-  const handlePauseQueue = async () => {
-    try {
-      await axiosClient.post('/queue/pause');
-      console.log('Queue paused');
-    } catch (error) {
-      console.error('Error pausing queue:', error);
-    }
-  };
+  // Removed "pause queue" as backend endpoint is not available
+  // Use callPatient/updateStatus instead via available endpoints
 
   useEffect(() => {
-    // Initial fetch
-    fetchQueueData();
-    
-    // Initialize WebSocket connection
-    socket.connect();
-    
+    (async () => {
+      // Require admin auth
+      const token = await storage.getItem('token');
+      if (!token) {
+        router.replace('/(web)/(admin)/login');
+        return;
+      }
+      // Hydrate HTTP and WebSocket auth
+      setAuthToken(token);
+      socket.setToken(token);
+      socket.connect();
+
+      // Load institutions and select default if not set
+      try {
+        const resp = await axiosClient.get('/institutions');
+        const list = resp?.data?.data ?? resp?.data ?? [];
+        setInstitutions(list);
+        if (!selectedInstitutionId && list.length) {
+          const firstId = list[0]?.id || list[0]?.code || null;
+          if (firstId) setSelectedInstitutionId(firstId);
+        }
+      } catch (e) {
+        console.warn('Failed to load institutions', e);
+      }
+
+      // Initial fetch (may fetch all if institution not yet selected)
+      await fetchQueueData();
+    })();
+
     const handleQueueUpdate = (data: any) => {
       console.log("Queue update received:", data);
       if (data.queueData) {
@@ -108,11 +137,6 @@ export default function QueueScreen() {
     socket.addCallbacks("queue_almost_ready", handleQueueAlmostReady);
     socket.addCallbacks("queue_called", handleQueueCalled);
     socket.addCallbacks("queue_completed", handleQueueCompleted);
-    
-    // Subscribe to queue updates for admin monitoring
-    socket.emit('subscribe_notifications', {
-      types: ['queue_update', 'queue_ready', 'queue_almost_ready', 'queue_called', 'queue_completed']
-    });
 
     return () => {
       socket.removeCallbacks("queue_update", handleQueueUpdate);
@@ -123,42 +147,76 @@ export default function QueueScreen() {
     };
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await clearAuth();
+    } catch {}
+    setAuthToken(null);
+    try { socket.disconnect(); } catch {}
+    router.replace('/(web)/(admin)/login');
+  };
+
+  // Subscribe to institution-specific queue updates when selection changes
+  useEffect(() => {
+    if (selectedInstitutionId) {
+      socket.subscribeQueueUpdates(selectedInstitutionId);
+      fetchQueueData();
+    }
+  }, [selectedInstitutionId]);
+
+  // Normalize status helper (backend may return 'in-progress', UI previously used 'onProcess')
+  const normalizeStatus = (status?: string) => {
+    if (!status) return 'waiting';
+    if (status === 'in-progress') return 'onProcess';
+    return status;
+  };
+
   // Transform queue data to table format
-  const transformedData = queueData.map(item => [
-    item.number,
-    item.name,
-    item.nik || 'N/A',
-    getStatusDisplay(item.status),
-    item.estimatedTime || 'N/A',
-    item.priority || 'General'
-  ]);
+  const transformedData = queueData.map(item => {
+    const statusNorm = normalizeStatus(item.status as any);
+    return [
+      item.number,
+      item.name,
+      item.nik || 'N/A',
+      getStatusDisplay(statusNorm as any),
+      item.estimatedTime || 'N/A',
+      item.priority || 'General'
+    ];
+  });
 
   // Get display text for status
   const getStatusDisplay = (status: QueueItem['status']) => {
-    const statusMap = {
-      'waiting': 'Waiting',
-      'onProcess': 'Processing',
-      'completed': 'Completed',
+    const statusMap: Record<string, string> = {
+      waiting: 'Waiting',
+      onProcess: 'Processing',
+      'in-progress': 'Processing',
+      called: 'Called',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      missed: 'Missed',
     };
-    return statusMap[status] || status;
+    return statusMap[status as string] || String(status || '');
   };
 
   // Get status color
   const getStatusColor = (status: QueueItem['status']) => {
-    const colorMap = {
-      'waiting': '#3B82F6',      // blue
-      'onProcess': '#F59E0B',    // orange
-      'completed': '#10B981',    // green
-      'called': '#8B5CF6',       // purple
-      'missed': '#EF4444'        // red
+    const colorMap: Record<string, string> = {
+      waiting: '#3B82F6',        // blue
+      onProcess: '#F59E0B',      // orange
+      'in-progress': '#F59E0B',  // orange
+      completed: '#10B981',      // green
+      called: '#8B5CF6',         // purple
+      missed: '#EF4444',         // red
+      cancelled: '#9CA3AF',      // gray
     };
-    return colorMap[status] || '#6B7280';
+    return colorMap[status as string] || '#6B7280';
   };
 
   const filteredData = transformedData.filter(item => {
     if (filter === "all") return true;
     const originalItem = queueData.find(q => q.number === item[0]);
-    return originalItem?.status === filter;
+    const st = normalizeStatus(originalItem?.status as any);
+    return st === filter;
   });
 
   const filterOptions: { key: FilterType; label: string }[] = [
@@ -189,20 +247,45 @@ export default function QueueScreen() {
               <Text className="text-gray-600">Real-time queue monitoring</Text>
             </View>
             <View className="flex-row">
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={fetchQueueData}
                 className="bg-green-500 px-4 py-2 rounded-lg mr-2"
               >
                 <RefreshCcw size={20} color="white" />
               </TouchableOpacity>
-              <TouchableOpacity className="bg-blue-500 px-4 py-2 rounded-lg">
+              <TouchableOpacity className="bg-blue-500 px-4 py-2 rounded-lg mr-2">
                 <PlusCircle size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleLogout}
+                className="bg-red-500 px-4 py-2 rounded-lg"
+              >
+                <Text className="text-white font-medium">Logout</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Filter Buttons */}
+          {/* Institution Selection */}
           <View className="flex-row mt-4 flex-wrap">
+            {institutions.map((inst: any) => {
+              const id = inst?.id || inst?.code;
+              const active = selectedInstitutionId === id;
+              return (
+                <TouchableOpacity
+                  key={id || inst?.name}
+                  className={`px-3 py-2 rounded-lg mr-2 mb-2 ${active ? 'bg-blue-600' : 'bg-gray-200'}`}
+                  onPress={() => id && setSelectedInstitutionId(id)}
+                >
+                  <Text className={`font-medium ${active ? 'text-white' : 'text-gray-700'}`}>
+                    {inst?.name || inst?.code || 'Institution'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Filter Buttons */}
+          <View className="flex-row mt-2 flex-wrap">
             {filterOptions.map((filterOption) => (
               <TouchableOpacity
                 key={filterOption.key}
@@ -270,16 +353,7 @@ export default function QueueScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={handlePauseQueue}
-                className="w-[48%] bg-red-500 rounded-lg p-4 mb-3"
-              >
-                <PauseCircle size={24} color="white" />
-                <Text className="text-white font-medium mt-2">Pause Queue</Text>
-                <Text className="text-white text-xs mt-1 opacity-80">
-                  Temporarily stop queue
-                </Text>
-              </TouchableOpacity>
+              {/* Pause removed: backend endpoint not available */}
             </View>
           </View>
 

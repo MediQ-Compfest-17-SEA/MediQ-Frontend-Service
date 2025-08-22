@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Animated, StatusBar, Text } from 'react-native';
-import {
-  Heart,
-  Activity,
-  Clock,
-  CheckCircle,
-  User,
-  Monitor
-} from 'lucide-react-native';
 import { QueueItem } from '@/Interfaces/IQueue';
-import useWebSocket from '@/hooks/useWebSocket';
-
+import { useRouter } from "expo-router";
+import {
+  Activity,
+  CheckCircle,
+  Clock,
+  Heart,
+  Monitor,
+  RefreshCw,
+  User
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import axios from '../../../lib/axios';
 
 export default function Leaderboard() {
   const [queueData, setQueueData] = useState<QueueItem[]>([]);
@@ -19,58 +20,147 @@ export default function Leaderboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [pulseAnim] = useState(new Animated.Value(1));
   const [fadeAnim] = useState(new Animated.Value(1));
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const isMountedRef = useRef(true);
 
-  // Mock data untuk demo - nanti diganti dengan WebSocket
-  const mockQueueData = [
-    { id: 1, number: 'A001', name: 'John Doe', status: 'current', doctor: 'Dr. Smith', estimatedTime: '10:30' },
-    { id: 2, number: 'A002', name: 'Jane Smith', status: 'waiting', doctor: 'Dr. Smith', estimatedTime: '10:45' },
-    { id: 3, number: 'A003', name: 'Bob Johnson', status: 'waiting', doctor: 'Dr. Johnson', estimatedTime: '11:00' },
-    { id: 4, number: 'B001', name: 'Alice Brown', status: 'current', doctor: 'Dr. Williams', estimatedTime: '10:35' },
-    { id: 5, number: 'B002', name: 'Charlie Wilson', status: 'waiting', doctor: 'Dr. Williams', estimatedTime: '10:50' },
-    { id: 6, number: 'C001', name: 'Diana Prince', status: 'completed', doctor: 'Dr. Davis', estimatedTime: '10:15' },
-  ];
+  const normalizeStatus = (status: string) => status.toLowerCase();
 
+  const fetchLeaderboardData = useCallback(async () => {
+    if (!isRefreshing) {
+      setIsLoading(true);
+    }
+    setError(null);
+
+    try {
+      const response = await axios.get('/queue');
+
+      if (Array.isArray(response.data)) {
+        const allQueues: QueueItem[] = response.data;
+
+        const currentlyServing = allQueues.find(
+          (q) => {
+            const s = normalizeStatus(q.status);
+            return s === 'current' || s === 'in_progress' || s === 'onprocess';
+          }
+        );
+
+        const waitingList = allQueues.filter(
+          (q) => q.id !== currentlyServing?.id
+        );
+
+        if (isMountedRef.current) {
+          setCurrentQueue(currentlyServing || null);
+          setQueueData(waitingList);
+          setIsConnected(true);
+        }
+
+      } else {
+        console.warn("API response is not an array:", response.data);
+        if (isMountedRef.current) {
+          setQueueData([]);
+          setCurrentQueue(null);
+        }
+      }
+    } catch (err: any) {
+      if (isMountedRef.current) {
+        setIsConnected(false);
+        if (err.response && err.response.status === 401) {
+          setError("Sesi Anda telah berakhir. Silakan login kembali.");
+          router.replace('/(web)/(admin)/login');
+        } else {
+          console.error("Failed to fetch leaderboard:", err);
+          setError("Tidak dapat mengambil data dari server.");
+        }
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    }
+  }, [isRefreshing, router]);
+
+  // Memoized sorted queue data
+  const sortedQueueData = useMemo(() => {
+    return queueData.sort((a, b) => {
+      // Sort by queue number if available
+      if (a.number && b.number) {
+        return parseInt(a.number) - parseInt(b.number);
+      }
+      return 0;
+    });
+  }, [queueData]);
+
+  // Initial load
   useEffect(() => {
+    fetchLeaderboardData();
     
-    
-    // Update current time every second
+    // Cleanup function
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Auto refresh every 30 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      if (isMountedRef.current && !isLoading) {
+        setIsRefreshing(true);
+        fetchLeaderboardData();
+      }
+    }, 30000);
+
+    return () => clearInterval(refreshInterval);
+  }, [fetchLeaderboardData, isLoading]);
+
+  // Time and animations
+  useEffect(() => {
     const timeInterval = setInterval(() => {
-      setCurrentTime(new Date());
+      if (isMountedRef.current) {
+        setCurrentTime(new Date());
+      }
     }, 1000);
 
-    // Pulse animation
-    Animated.loop(
+    const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
       ])
-    ).start();
+    );
 
-    // Fade animation for queue updates
-    Animated.loop(
+    const fade = Animated.loop(
       Animated.sequence([
         Animated.timing(fadeAnim, { toValue: 0.7, duration: 2000, useNativeDriver: true }),
         Animated.timing(fadeAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
       ])
-    ).start();
+    );
+
+    pulse.start();
+    fade.start();
 
     return () => {
-      // if (ws) ws.close();
       clearInterval(timeInterval);
+      pulse.stop();
+      fade.stop();
     };
   }, [pulseAnim, fadeAnim]);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('id-ID', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
+    return date.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (normalizeStatus(status)) {
       case 'current':
+      case 'in_progress':
+      case 'onprocess':
         return 'bg-blue-500';
       case 'waiting':
         return 'bg-yellow-500';
@@ -82,8 +172,10 @@ export default function Leaderboard() {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (normalizeStatus(status)) {
       case 'current':
+      case 'in_progress':
+      case 'onprocess':
         return <Activity size={24} color="white" />;
       case 'waiting':
         return <Clock size={24} color="white" />;
@@ -94,9 +186,21 @@ export default function Leaderboard() {
     }
   };
 
+  const isCurrentlyBeingServed = (status: string) => {
+    const s = normalizeStatus(status);
+    return s === 'current' || s === 'in_progress' || s === 'onprocess';
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setIsRefreshing(true);
+    fetchLeaderboardData();
+  };
+
   return (
     <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />  
+      
       {/* Header */}
       <View className="bg-white shadow-sm border-b border-gray-200">
         <View className="flex-row items-center justify-between px-8 py-6">
@@ -134,8 +238,39 @@ export default function Leaderboard() {
 
       {/* Main Content */}
       <ScrollView className="flex-1 px-8 py-6">
+        {/* Error Message */}
+        {error && (
+          <View className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
+            <Text className="text-red-700 text-base mb-2">{error}</Text>
+            <TouchableOpacity 
+              onPress={handleRetry}
+              className="bg-red-100 px-4 py-2 rounded-lg flex-row items-center justify-center"
+            >
+              <RefreshCw size={16} color="#DC2626" />
+              <Text className="text-red-600 font-medium ml-2">Coba Lagi</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Loading Indicator */}
+        {isLoading && !error && (
+          <View className="items-center justify-center py-8">
+            <Animated.View
+              style={{
+                transform: [{ rotate: pulseAnim.interpolate({
+                  inputRange: [1, 1.1],
+                  outputRange: ['0deg', '360deg']
+                }) }]
+              }}
+            >
+              <RefreshCw size={32} color="#3B82F6" />
+            </Animated.View>
+            <Text className="text-gray-600 text-lg mt-2">Memuat data...</Text>
+          </View>
+        )}
+
         {/* Current Queue Section */}
-        {currentQueue && (
+        {currentQueue && !isLoading && (
           <View className="mb-8">
             <Text className="text-gray-800 text-2xl font-bold mb-4">Sedang Dilayani</Text>
             <Animated.View
@@ -165,52 +300,68 @@ export default function Leaderboard() {
         )}
 
         {/* Queue List */}
-        <View>
-          <Text className="text-gray-800 text-2xl font-bold mb-4">Daftar Antrean</Text>
-          
-          <View className="space-y-4">
-            {queueData.map((queue, index) => (
-              <Animated.View
-                key={queue.id}
-                style={{
-                  opacity: queue.status === 'onProcess' ? fadeAnim : 1,
-                }}
-                className="bg-white rounded-2xl p-5 shadow-md border border-gray-100"
-              >
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center flex-1">
-                    {/* Status Badge */}
-                    <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${getStatusColor(queue.status)}`}>
-                      {getStatusIcon(queue.status)}
+        {!isLoading && (
+          <View>
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-gray-800 text-2xl font-bold">Daftar Antrean</Text>
+              {isRefreshing && (
+                <Animated.View
+                  style={{
+                    transform: [{ rotate: pulseAnim.interpolate({
+                      inputRange: [1, 1.1],
+                      outputRange: ['0deg', '360deg']
+                    }) }]
+                  }}
+                >
+                  <RefreshCw size={20} color="#3B82F6" />
+                </Animated.View>
+              )}
+            </View>
+            
+            <View className="space-y-4">
+              {sortedQueueData.map((queue, index) => (
+                <Animated.View
+                  key={queue.id}
+                  style={{
+                    opacity: isCurrentlyBeingServed(queue.status) ? fadeAnim : 1,
+                  }}
+                  className="bg-white rounded-2xl p-5 shadow-md border border-gray-100"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                      {/* Status Badge */}
+                      <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${getStatusColor(queue.status)}`}>
+                        {getStatusIcon(queue.status)}
+                      </View>
+                      
+                      {/* Queue Info */}
+                      <View className="flex-1">
+                        <View className="flex-row items-center">
+                          <Text className="text-gray-800 text-xl font-bold mr-3">{queue.number}</Text>
+                          {isCurrentlyBeingServed(queue.status) && (
+                            <View className="bg-blue-100 px-3 py-1 rounded-full">
+                              <Text className="text-blue-600 text-sm font-medium">Sedang Dilayani</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text className="text-gray-600 text-base mt-1">{queue.name}</Text>
+                      </View>
                     </View>
                     
-                    {/* Queue Info */}
-                    <View className="flex-1">
-                      <View className="flex-row items-center">
-                        <Text className="text-gray-800 text-xl font-bold mr-3">{queue.number}</Text>
-                        {queue.status === 'onProcess' && (
-                          <View className="bg-blue-100 px-3 py-1 rounded-full">
-                            <Text className="text-blue-600 text-sm font-medium">Sedang Dilayani</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="text-gray-600 text-base mt-1">{queue.name}</Text>
+                    {/* Time & Position */}
+                    <View className="items-end">
+                      <Text className="text-gray-800 text-lg font-bold">{queue.estimatedTime}</Text>
+                      <Text className="text-gray-500 text-sm">#{index + 1}</Text>
                     </View>
                   </View>
-                  
-                  {/* Time & Position */}
-                  <View className="items-end">
-                    <Text className="text-gray-800 text-lg font-bold">{queue.estimatedTime}</Text>
-                    <Text className="text-gray-500 text-sm">#{index + 1}</Text>
-                  </View>
-                </View>
-              </Animated.View>
-            ))}
+                </Animated.View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Empty State */}
-        {queueData.length === 0 && (
+        {sortedQueueData.length === 0 && !currentQueue && !isLoading && !error && (
           <View className="items-center justify-center py-16">
             <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
               <Clock size={40} color="#9CA3AF" />
@@ -225,9 +376,14 @@ export default function Leaderboard() {
 
       {/* Footer */}
       <View className="bg-white border-t border-gray-200 px-8 py-4">
-        <Text className="text-gray-400 text-sm text-center">
-          © 2024 MediQ Healthcare Solutions - TV Display Mode
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-gray-400 text-sm">
+            © 2024 MediQ Healthcare Solutions - TV Display Mode
+          </Text>
+          <Text className="text-gray-400 text-xs">
+            Auto refresh setiap 30 detik
+          </Text>
+        </View>
       </View>
     </View>
   );
